@@ -9,18 +9,17 @@ type IsoWeekOfYear_obj = {
 
 
 export class IsoWeekOfYear {
-    
-    get weekNumber() : number; 
-    set weekNumber(value: number); 
-    
-    get isoYear() : number; 
-    set isoYear(value: number); 
-    
-    /** Create `IsoWeekOfYear` from an object that contains all of `IsoWeekOfYear`s fields.
-    * Optional fields do not need to be included in the provided object.
-    */
+    get weekNumber(): number;
+    set weekNumber(value: number);
+    get isoYear(): number;
+    set isoYear(value: number);
+    /** @internal */
     static fromFields(structObj : IsoWeekOfYear_obj) : IsoWeekOfYear;
 
+    /**
+    * Create `IsoWeekOfYear` from an object that contains all of `IsoWeekOfYear`s fields.
+    * Optional fields do not need to be included in the provided object.
+    */
+    constructor(structObj: IsoWeekOfYear_obj);
 
-    constructor(structObj : IsoWeekOfYear_obj);
 }

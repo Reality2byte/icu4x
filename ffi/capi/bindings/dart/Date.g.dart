@@ -31,8 +31,8 @@ final class Date implements ffi.Finalizable {
   /// See the [Rust documentation for `new_from_iso`](https://docs.rs/icu/latest/icu/calendar/struct.Date.html#method.new_from_iso) for more information.
   ///
   /// Throws [CalendarError] on failure.
-  factory Date.fromIsoInCalendar(int year, int month, int day, Calendar calendar) {
-    final result = _icu4x_Date_from_iso_in_calendar_mv1(year, month, day, calendar._ffi);
+  factory Date.fromIsoInCalendar(int isoYear, int isoMonth, int isoDay, Calendar calendar) {
+    final result = _icu4x_Date_from_iso_in_calendar_mv1(isoYear, isoMonth, isoDay, calendar._ffi);
     if (!result.isOk) {
       throw CalendarError.values[result.union.err];
     }
@@ -72,12 +72,12 @@ final class Date implements ffi.Finalizable {
   ///
   /// See the [Rust documentation for `try_from_str`](https://docs.rs/icu/latest/icu/calendar/struct.Date.html#method.try_from_str) for more information.
   ///
-  /// Throws [CalendarParseError] on failure.
+  /// Throws [Rfc9557ParseError] on failure.
   factory Date.fromString(String v, Calendar calendar) {
     final temp = _FinalizedArena();
     final result = _icu4x_Date_from_string_mv1(v._utf8AllocIn(temp.arena), calendar._ffi);
     if (!result.isOk) {
-      throw CalendarParseError.values[result.union.err];
+      throw Rfc9557ParseError.values[result.union.err];
     }
     return Date._fromFfi(result.union.ok, []);
   }
@@ -234,6 +234,7 @@ final class Date implements ffi.Finalizable {
     final result = _icu4x_Date_calendar_mv1(_ffi);
     return Calendar._fromFfi(result, []);
   }
+
 }
 
 @_DiplomatFfiUse('icu4x_Date_destroy_mv1')
@@ -244,7 +245,7 @@ external void _icu4x_Date_destroy_mv1(ffi.Pointer<ffi.Void> self);
 @_DiplomatFfiUse('icu4x_Date_from_iso_in_calendar_mv1')
 @ffi.Native<_ResultOpaqueInt32 Function(ffi.Int32, ffi.Uint8, ffi.Uint8, ffi.Pointer<ffi.Opaque>)>(isLeaf: true, symbol: 'icu4x_Date_from_iso_in_calendar_mv1')
 // ignore: non_constant_identifier_names
-external _ResultOpaqueInt32 _icu4x_Date_from_iso_in_calendar_mv1(int year, int month, int day, ffi.Pointer<ffi.Opaque> calendar);
+external _ResultOpaqueInt32 _icu4x_Date_from_iso_in_calendar_mv1(int isoYear, int isoMonth, int isoDay, ffi.Pointer<ffi.Opaque> calendar);
 
 @_DiplomatFfiUse('icu4x_Date_from_codes_in_calendar_mv1')
 @ffi.Native<_ResultOpaqueInt32 Function(_SliceUtf8, ffi.Int32, _SliceUtf8, ffi.Uint8, ffi.Pointer<ffi.Opaque>)>(isLeaf: true, symbol: 'icu4x_Date_from_codes_in_calendar_mv1')

@@ -30,7 +30,7 @@ An example `ICU4X` powered application in Rust may look like below...
 
 ```toml
 [dependencies]
-icu = "1.5.0"
+icu = "2.0.0"
 ```
 
 `src/main.rs`:
@@ -47,7 +47,6 @@ let dtf = DateTimeFormatter::try_new(
 .expect("locale should be present in compiled data");
 
 let date = Date::try_new_iso(2020, 9, 12).expect("date should be valid");
-let date = date.to_any();
 
 let formatted_date = dtf.format(&date).to_string();
 assert_eq!(

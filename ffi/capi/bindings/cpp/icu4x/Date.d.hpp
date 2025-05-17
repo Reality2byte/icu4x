@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 
 namespace icu4x {
@@ -18,7 +19,7 @@ class Date;
 namespace capi { struct IsoDate; }
 class IsoDate;
 class CalendarError;
-class CalendarParseError;
+class Rfc9557ParseError;
 class Weekday;
 }
 
@@ -44,7 +45,7 @@ public:
    *
    * See the [Rust documentation for `new_from_iso`](https://docs.rs/icu/latest/icu/calendar/struct.Date.html#method.new_from_iso) for more information.
    */
-  inline static diplomat::result<std::unique_ptr<icu4x::Date>, icu4x::CalendarError> from_iso_in_calendar(int32_t year, uint8_t month, uint8_t day, const icu4x::Calendar& calendar);
+  inline static diplomat::result<std::unique_ptr<icu4x::Date>, icu4x::CalendarError> from_iso_in_calendar(int32_t iso_year, uint8_t iso_month, uint8_t iso_day, const icu4x::Calendar& calendar);
 
   /**
    * Creates a new [`Date`] from the given codes, which are interpreted in the given calendar system
@@ -67,7 +68,7 @@ public:
    *
    * See the [Rust documentation for `try_from_str`](https://docs.rs/icu/latest/icu/calendar/struct.Date.html#method.try_from_str) for more information.
    */
-  inline static diplomat::result<std::unique_ptr<icu4x::Date>, icu4x::CalendarParseError> from_string(std::string_view v, const icu4x::Calendar& calendar);
+  inline static diplomat::result<std::unique_ptr<icu4x::Date>, icu4x::Rfc9557ParseError> from_string(std::string_view v, const icu4x::Calendar& calendar);
 
   /**
    * Convert this date to one in a different calendar

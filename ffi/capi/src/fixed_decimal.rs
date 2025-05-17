@@ -126,7 +126,6 @@ pub mod ffi {
         #[diplomat::rust_link(fixed_decimal::DoublePrecision, Enum, hidden)]
         #[diplomat::attr(js, rename = "from_number_with_lower_magnitude")]
         #[diplomat::attr(all(supports = fallible_constructors, supports = named_constructors), named_constructor)]
-        #[diplomat::demo(default_constructor)]
         pub fn from_double_with_lower_magnitude(
             f: f64,
             magnitude: i16,
@@ -160,6 +159,7 @@ pub mod ffi {
         #[diplomat::rust_link(fixed_decimal::DoublePrecision, Enum, hidden)]
         #[diplomat::attr(js, rename = "from_number_with_round_trip_precision")]
         #[diplomat::attr(all(supports = fallible_constructors, supports = named_constructors), named_constructor)]
+        #[diplomat::demo(default_constructor)]
         pub fn from_double_with_round_trip_precision(
             f: f64,
         ) -> Result<Box<Decimal>, DecimalLimitError> {
@@ -354,6 +354,7 @@ pub mod ffi {
         #[diplomat::rust_link(fixed_decimal::Decimal::write_to, FnInTypedef)]
         #[diplomat::rust_link(fixed_decimal::Decimal::to_string, FnInTypedef, hidden)]
         #[diplomat::attr(auto, stringifier)]
+        #[diplomat::attr(demo_gen, disable)] // this just returns the single constructor argument
         pub fn to_string(&self, to: &mut diplomat_runtime::DiplomatWrite) {
             let _ = self.0.write_to(to);
         }

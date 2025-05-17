@@ -6,18 +6,20 @@ import type { WordBreakIteratorUtf16 } from "./WordBreakIteratorUtf16"
 import type { pointer, codepoint } from "./diplomat-runtime.d.ts";
 
 
-/** 
+
+/**
  * An ICU4X word-break segmenter, capable of finding word breakpoints in strings.
  *
  * See the [Rust documentation for `WordSegmenter`](https://docs.rs/icu/latest/icu/segmenter/struct.WordSegmenter.html) for more information.
  */
-
-
 export class WordSegmenter {
-    
+    /** @internal */
     get ffiValue(): pointer;
+    /** @internal */
+    constructor();
 
-    /** 
+
+    /**
      * Construct an [`WordSegmenter`] with automatically selecting the best available LSTM
      * or dictionary payload data, using compiled data. This does not assume any content locale.
      *
@@ -28,7 +30,7 @@ export class WordSegmenter {
      */
     static createAuto(): WordSegmenter;
 
-    /** 
+    /**
      * Construct an [`WordSegmenter`] with automatically selecting the best available LSTM
      * or dictionary payload data, using compiled data.
      *
@@ -39,7 +41,7 @@ export class WordSegmenter {
      */
     static createAutoWithContentLocale(locale: Locale): WordSegmenter;
 
-    /** 
+    /**
      * Construct an [`WordSegmenter`] with automatically selecting the best available LSTM
      * or dictionary payload data, using a particular data source.
      *
@@ -50,7 +52,7 @@ export class WordSegmenter {
      */
     static createAutoWithContentLocaleAndProvider(provider: DataProvider, locale: Locale): WordSegmenter;
 
-    /** 
+    /**
      * Construct an [`WordSegmenter`] with LSTM payload data for Burmese, Khmer, Lao, and
      * Thai, using compiled data.  This does not assume any content locale.
      *
@@ -61,7 +63,7 @@ export class WordSegmenter {
      */
     static createLstm(): WordSegmenter;
 
-    /** 
+    /**
      * Construct an [`WordSegmenter`] with LSTM payload data for Burmese, Khmer, Lao, and
      * Thai, using compiled data.
      *
@@ -72,7 +74,7 @@ export class WordSegmenter {
      */
     static createLstmWithContentLocale(locale: Locale): WordSegmenter;
 
-    /** 
+    /**
      * Construct an [`WordSegmenter`] with LSTM payload data for Burmese, Khmer, Lao, and
      * Thai, using a particular data source.
      *
@@ -83,7 +85,7 @@ export class WordSegmenter {
      */
     static createLstmWithContentLocaleAndProvider(provider: DataProvider, locale: Locale): WordSegmenter;
 
-    /** 
+    /**
      * Construct an [`WordSegmenter`] with with dictionary payload data for Chinese, Japanese,
      * Burmese, Khmer, Lao, and Thai, using compiled data.  This does not assume any content locale.
      *
@@ -94,7 +96,7 @@ export class WordSegmenter {
      */
     static createDictionary(): WordSegmenter;
 
-    /** 
+    /**
      * Construct an [`WordSegmenter`] with dictionary payload data for Chinese, Japanese,
      * Burmese, Khmer, Lao, and Thai, using compiled data.
      *
@@ -105,7 +107,7 @@ export class WordSegmenter {
      */
     static createDictionaryWithContentLocale(locale: Locale): WordSegmenter;
 
-    /** 
+    /**
      * Construct an [`WordSegmenter`] with dictionary payload data for Chinese, Japanese,
      * Burmese, Khmer, Lao, and Thai, using a particular data source.
      *
@@ -116,7 +118,7 @@ export class WordSegmenter {
      */
     static createDictionaryWithContentLocaleAndProvider(provider: DataProvider, locale: Locale): WordSegmenter;
 
-    /** 
+    /**
      * Segments a string.
      *
      * Ill-formed input is treated as if errors had been replaced with REPLACEMENT CHARACTERs according

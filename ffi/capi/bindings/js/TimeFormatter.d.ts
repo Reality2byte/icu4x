@@ -9,17 +9,17 @@ import type { TimePrecision } from "./TimePrecision"
 import type { pointer, codepoint } from "./diplomat-runtime.d.ts";
 
 
-/** 
+
+/**
  * See the [Rust documentation for `NoCalendarFormatter`](https://docs.rs/icu/latest/icu/datetime/type.NoCalendarFormatter.html) for more information.
  */
-
-
 export class TimeFormatter {
-    
+    /** @internal */
     get ffiValue(): pointer;
 
-    /** 
-     * See the [Rust documentation for `try_new`](https://docs.rs/icu/latest/icu/datetime/struct.NoCalendarFormatter.html#method.try_new) for more information.
+
+    /**
+     * See the [Rust documentation for `try_new`](https://docs.rs/icu/latest/icu/datetime/type.NoCalendarFormatter.html#method.try_new) for more information.
      *
      * See the [Rust documentation for `T`](https://docs.rs/icu/latest/icu/datetime/fieldsets/struct.T.html) for more information.
      *
@@ -27,10 +27,17 @@ export class TimeFormatter {
      */
     static createWithProvider(provider: DataProvider, locale: Locale, length: DateTimeLength | null, timePrecision: TimePrecision | null, alignment: DateTimeAlignment | null): TimeFormatter;
 
-    /** 
-     * See the [Rust documentation for `format`](https://docs.rs/icu/latest/icu/datetime/struct.FixedCalendarDateTimeFormatter.html#method.format) for more information.
+    /**
+     * See the [Rust documentation for `format`](https://docs.rs/icu/latest/icu/datetime/type.NoCalendarFormatter.html#method.format) for more information.
      */
     format(time: Time): string;
 
+    /**
+     * See the [Rust documentation for `try_new`](https://docs.rs/icu/latest/icu/datetime/type.NoCalendarFormatter.html#method.try_new) for more information.
+     *
+     * See the [Rust documentation for `T`](https://docs.rs/icu/latest/icu/datetime/fieldsets/struct.T.html) for more information.
+     *
+     * Additional information: [1](https://docs.rs/icu/latest/icu/datetime/fieldsets/struct.T.html#method.with_time_precision), [2](https://docs.rs/icu/latest/icu/datetime/fieldsets/struct.T.html#method.with_alignment), [3](https://docs.rs/icu/latest/icu/datetime/fieldsets/struct.T.html#method.for_length)
+     */
     constructor(locale: Locale, length: DateTimeLength | null, timePrecision: TimePrecision | null, alignment: DateTimeAlignment | null);
 }

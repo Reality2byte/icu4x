@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 
 namespace icu4x {
@@ -51,7 +52,7 @@ public:
   /**
    * Constructs a `BlobDataProvider` and returns it as an [`DataProvider`].
    *
-   * See the [Rust documentation for `BlobDataProvider`](https://docs.rs/icu_provider_blob/latest/icu_provider_blob/struct.BlobDataProvider.html) for more information.
+   * See the [Rust documentation for `try_new_from_static_blob`](https://docs.rs/icu_provider_blob/latest/icu_provider_blob/struct.BlobDataProvider.html#method.try_new_from_static_blob) for more information.
    */
   inline static diplomat::result<std::unique_ptr<icu4x::DataProvider>, icu4x::DataError> from_byte_slice(diplomat::span<const uint8_t> blob);
 
@@ -63,7 +64,7 @@ public:
    *
    * See the [Rust documentation for `ForkByMarkerProvider`](https://docs.rs/icu_provider_adapters/latest/icu_provider_adapters/fork/type.ForkByMarkerProvider.html) for more information.
    */
-  inline diplomat::result<std::monostate, icu4x::DataError> fork_by_key(icu4x::DataProvider& other);
+  inline diplomat::result<std::monostate, icu4x::DataError> fork_by_marker(icu4x::DataProvider& other);
 
   /**
    * Same as `fork_by_key` but forks by locale instead of key.

@@ -19,7 +19,7 @@
 typedef struct icu4x_Locale_from_string_mv1_result {union {Locale* ok; LocaleParseError err;}; bool is_ok;} icu4x_Locale_from_string_mv1_result;
 icu4x_Locale_from_string_mv1_result icu4x_Locale_from_string_mv1(DiplomatStringView name);
 
-Locale* icu4x_Locale_und_mv1(void);
+Locale* icu4x_Locale_unknown_mv1(void);
 
 Locale* icu4x_Locale_clone_mv1(const Locale* self);
 
@@ -55,7 +55,6 @@ bool icu4x_Locale_normalizing_eq_mv1(const Locale* self, DiplomatStringView othe
 int8_t icu4x_Locale_compare_to_string_mv1(const Locale* self, DiplomatStringView other);
 
 int8_t icu4x_Locale_compare_to_mv1(const Locale* self, const Locale* other);
-
 
 void icu4x_Locale_destroy_mv1(Locale* self);
 

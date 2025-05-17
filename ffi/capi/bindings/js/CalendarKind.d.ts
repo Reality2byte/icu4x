@@ -3,21 +3,21 @@ import type { Locale } from "./Locale"
 import type { pointer, codepoint } from "./diplomat-runtime.d.ts";
 
 
-/** 
+
+/**
  * The various calendar types currently supported by [`Calendar`]
  *
  * See the [Rust documentation for `AnyCalendarKind`](https://docs.rs/icu/latest/icu/calendar/enum.AnyCalendarKind.html) for more information.
  */
-
-
 export class CalendarKind {
-    
 
-    static fromValue(value : CalendarKind | string) : CalendarKind; 
+    /** @internal */
+    static fromValue(value: CalendarKind | string): CalendarKind;
 
-    get value() : string;
+    get value(): string;
 
-    get ffiValue() : number;
+    /** @internal */
+    get ffiValue(): number;
 
     static Iso : CalendarKind;
     static Gregorian : CalendarKind;
@@ -38,7 +38,8 @@ export class CalendarKind {
     static Persian : CalendarKind;
     static Roc : CalendarKind;
 
-    /** 
+
+    /**
      * Creates a new [`CalendarKind`] for the specified locale, using compiled data.
      *
      * See the [Rust documentation for `new`](https://docs.rs/icu/latest/icu/calendar/enum.AnyCalendarKind.html#method.new) for more information.

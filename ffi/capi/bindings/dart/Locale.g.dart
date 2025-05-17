@@ -43,11 +43,11 @@ final class Locale implements ffi.Finalizable, core.Comparable<Locale> {
     return Locale._fromFfi(result.union.ok, []);
   }
 
-  /// Construct a default undefined [`Locale`] "und".
+  /// Construct a unknown [`Locale`] "und".
   ///
-  /// See the [Rust documentation for `default`](https://docs.rs/icu/latest/icu/locale/struct.Locale.html#method.default) for more information.
-  factory Locale.und() {
-    final result = _icu4x_Locale_und_mv1();
+  /// See the [Rust documentation for `UNKNOWN`](https://docs.rs/icu/latest/icu/locale/struct.Locale.html#associatedconstant.UNKNOWN) for more information.
+  factory Locale.unknown() {
+    final result = _icu4x_Locale_unknown_mv1();
     return Locale._fromFfi(result, []);
   }
 
@@ -102,7 +102,6 @@ final class Locale implements ffi.Finalizable, core.Comparable<Locale> {
     if (!result.isOk) {
       throw LocaleParseError.values[result.union.err];
     }
-    
   }
 
   /// Returns a string representation of [`Locale`] region.
@@ -128,7 +127,6 @@ final class Locale implements ffi.Finalizable, core.Comparable<Locale> {
     if (!result.isOk) {
       throw LocaleParseError.values[result.union.err];
     }
-    
   }
 
   /// Returns a string representation of [`Locale`] script.
@@ -154,7 +152,6 @@ final class Locale implements ffi.Finalizable, core.Comparable<Locale> {
     if (!result.isOk) {
       throw LocaleParseError.values[result.union.err];
     }
-    
   }
 
   /// Normalizes a locale string.
@@ -203,6 +200,7 @@ final class Locale implements ffi.Finalizable, core.Comparable<Locale> {
     return result;
   }
 
+
   @override
   bool operator ==(Object other) => other is Locale && compareTo(other) == 0;
   @override
@@ -219,10 +217,10 @@ external void _icu4x_Locale_destroy_mv1(ffi.Pointer<ffi.Void> self);
 // ignore: non_constant_identifier_names
 external _ResultOpaqueInt32 _icu4x_Locale_from_string_mv1(_SliceUtf8 name);
 
-@_DiplomatFfiUse('icu4x_Locale_und_mv1')
-@ffi.Native<ffi.Pointer<ffi.Opaque> Function()>(isLeaf: true, symbol: 'icu4x_Locale_und_mv1')
+@_DiplomatFfiUse('icu4x_Locale_unknown_mv1')
+@ffi.Native<ffi.Pointer<ffi.Opaque> Function()>(isLeaf: true, symbol: 'icu4x_Locale_unknown_mv1')
 // ignore: non_constant_identifier_names
-external ffi.Pointer<ffi.Opaque> _icu4x_Locale_und_mv1();
+external ffi.Pointer<ffi.Opaque> _icu4x_Locale_unknown_mv1();
 
 @_DiplomatFfiUse('icu4x_Locale_clone_mv1')
 @ffi.Native<ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Opaque>)>(isLeaf: true, symbol: 'icu4x_Locale_clone_mv1')

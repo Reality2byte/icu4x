@@ -2,16 +2,18 @@
 import type { pointer, codepoint } from "./diplomat-runtime.d.ts";
 
 
-/** 
+
+/**
  * See the [Rust documentation for `SentenceBreakIterator`](https://docs.rs/icu/latest/icu/segmenter/iterators/struct.SentenceBreakIterator.html) for more information.
  */
-
-
 export class SentenceBreakIteratorUtf16 {
-    
+    /** @internal */
     get ffiValue(): pointer;
+    /** @internal */
+    constructor();
 
-    /** 
+
+    /**
      * Finds the next breakpoint. Returns -1 if at the end of the string or if the index is
      * out of range of a 32-bit signed integer.
      *

@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 
 namespace icu4x {
@@ -40,7 +41,7 @@ class TimeFormatter {
 public:
 
   /**
-   * See the [Rust documentation for `try_new`](https://docs.rs/icu/latest/icu/datetime/struct.NoCalendarFormatter.html#method.try_new) for more information.
+   * See the [Rust documentation for `try_new`](https://docs.rs/icu/latest/icu/datetime/type.NoCalendarFormatter.html#method.try_new) for more information.
    *
    * See the [Rust documentation for `T`](https://docs.rs/icu/latest/icu/datetime/fieldsets/struct.T.html) for more information.
    *
@@ -49,7 +50,7 @@ public:
   inline static diplomat::result<std::unique_ptr<icu4x::TimeFormatter>, icu4x::DateTimeFormatterLoadError> create(const icu4x::Locale& locale, std::optional<icu4x::DateTimeLength> length, std::optional<icu4x::TimePrecision> time_precision, std::optional<icu4x::DateTimeAlignment> alignment);
 
   /**
-   * See the [Rust documentation for `try_new`](https://docs.rs/icu/latest/icu/datetime/struct.NoCalendarFormatter.html#method.try_new) for more information.
+   * See the [Rust documentation for `try_new`](https://docs.rs/icu/latest/icu/datetime/type.NoCalendarFormatter.html#method.try_new) for more information.
    *
    * See the [Rust documentation for `T`](https://docs.rs/icu/latest/icu/datetime/fieldsets/struct.T.html) for more information.
    *
@@ -58,7 +59,7 @@ public:
   inline static diplomat::result<std::unique_ptr<icu4x::TimeFormatter>, icu4x::DateTimeFormatterLoadError> create_with_provider(const icu4x::DataProvider& provider, const icu4x::Locale& locale, std::optional<icu4x::DateTimeLength> length, std::optional<icu4x::TimePrecision> time_precision, std::optional<icu4x::DateTimeAlignment> alignment);
 
   /**
-   * See the [Rust documentation for `format`](https://docs.rs/icu/latest/icu/datetime/struct.FixedCalendarDateTimeFormatter.html#method.format) for more information.
+   * See the [Rust documentation for `format`](https://docs.rs/icu/latest/icu/datetime/type.NoCalendarFormatter.html#method.format) for more information.
    */
   inline std::string format(const icu4x::Time& time) const;
 
