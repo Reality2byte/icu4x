@@ -175,7 +175,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix: 
-        behavior: [local] # reenable cratesio for 2.0
+        behavior: [local, cratesio]
       fail-fast: false
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -426,8 +426,8 @@ jobs:
       id: gn-third-party-tools-cache
       with:
         path: |
-          tutorials/gn/third_party_tools
-        key: gn-third-party-${{ runner.os }}-${{ hashFiles('tools/make/gn.toml', 'tutorials/gn/Cargo.lock') }}
+          examples/gn/third_party_tools
+        key: gn-third-party-${{ runner.os }}-${{ hashFiles('tools/make/gn.toml', 'examples/gn/Cargo.lock') }}
     - name: Install GN Third-Party Tools
       if: steps.gn-third-party-tools-cache.outputs.cache-hit != 'true'
       run: cargo make gn-install
