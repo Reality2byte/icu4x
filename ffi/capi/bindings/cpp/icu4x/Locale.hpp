@@ -10,6 +10,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 #include "LocaleParseError.hpp"
 
@@ -17,50 +18,52 @@
 namespace icu4x {
 namespace capi {
     extern "C" {
-    
+
     typedef struct icu4x_Locale_from_string_mv1_result {union {icu4x::capi::Locale* ok; icu4x::capi::LocaleParseError err;}; bool is_ok;} icu4x_Locale_from_string_mv1_result;
     icu4x_Locale_from_string_mv1_result icu4x_Locale_from_string_mv1(diplomat::capi::DiplomatStringView name);
-    
-    icu4x::capi::Locale* icu4x_Locale_und_mv1(void);
-    
+
+    icu4x::capi::Locale* icu4x_Locale_unknown_mv1(void);
+
     icu4x::capi::Locale* icu4x_Locale_clone_mv1(const icu4x::capi::Locale* self);
-    
+
     void icu4x_Locale_basename_mv1(const icu4x::capi::Locale* self, diplomat::capi::DiplomatWrite* write);
-    
+
     typedef struct icu4x_Locale_get_unicode_extension_mv1_result { bool is_ok;} icu4x_Locale_get_unicode_extension_mv1_result;
     icu4x_Locale_get_unicode_extension_mv1_result icu4x_Locale_get_unicode_extension_mv1(const icu4x::capi::Locale* self, diplomat::capi::DiplomatStringView s, diplomat::capi::DiplomatWrite* write);
-    
+
+    typedef struct icu4x_Locale_set_unicode_extension_mv1_result { bool is_ok;} icu4x_Locale_set_unicode_extension_mv1_result;
+    icu4x_Locale_set_unicode_extension_mv1_result icu4x_Locale_set_unicode_extension_mv1(icu4x::capi::Locale* self, diplomat::capi::DiplomatStringView k, diplomat::capi::DiplomatStringView v);
+
     void icu4x_Locale_language_mv1(const icu4x::capi::Locale* self, diplomat::capi::DiplomatWrite* write);
-    
+
     typedef struct icu4x_Locale_set_language_mv1_result {union { icu4x::capi::LocaleParseError err;}; bool is_ok;} icu4x_Locale_set_language_mv1_result;
     icu4x_Locale_set_language_mv1_result icu4x_Locale_set_language_mv1(icu4x::capi::Locale* self, diplomat::capi::DiplomatStringView s);
-    
+
     typedef struct icu4x_Locale_region_mv1_result { bool is_ok;} icu4x_Locale_region_mv1_result;
     icu4x_Locale_region_mv1_result icu4x_Locale_region_mv1(const icu4x::capi::Locale* self, diplomat::capi::DiplomatWrite* write);
-    
+
     typedef struct icu4x_Locale_set_region_mv1_result {union { icu4x::capi::LocaleParseError err;}; bool is_ok;} icu4x_Locale_set_region_mv1_result;
     icu4x_Locale_set_region_mv1_result icu4x_Locale_set_region_mv1(icu4x::capi::Locale* self, diplomat::capi::DiplomatStringView s);
-    
+
     typedef struct icu4x_Locale_script_mv1_result { bool is_ok;} icu4x_Locale_script_mv1_result;
     icu4x_Locale_script_mv1_result icu4x_Locale_script_mv1(const icu4x::capi::Locale* self, diplomat::capi::DiplomatWrite* write);
-    
+
     typedef struct icu4x_Locale_set_script_mv1_result {union { icu4x::capi::LocaleParseError err;}; bool is_ok;} icu4x_Locale_set_script_mv1_result;
     icu4x_Locale_set_script_mv1_result icu4x_Locale_set_script_mv1(icu4x::capi::Locale* self, diplomat::capi::DiplomatStringView s);
-    
+
     typedef struct icu4x_Locale_normalize_mv1_result {union { icu4x::capi::LocaleParseError err;}; bool is_ok;} icu4x_Locale_normalize_mv1_result;
     icu4x_Locale_normalize_mv1_result icu4x_Locale_normalize_mv1(diplomat::capi::DiplomatStringView s, diplomat::capi::DiplomatWrite* write);
-    
+
     void icu4x_Locale_to_string_mv1(const icu4x::capi::Locale* self, diplomat::capi::DiplomatWrite* write);
-    
+
     bool icu4x_Locale_normalizing_eq_mv1(const icu4x::capi::Locale* self, diplomat::capi::DiplomatStringView other);
-    
+
     int8_t icu4x_Locale_compare_to_string_mv1(const icu4x::capi::Locale* self, diplomat::capi::DiplomatStringView other);
-    
+
     int8_t icu4x_Locale_compare_to_mv1(const icu4x::capi::Locale* self, const icu4x::capi::Locale* other);
-    
-    
+
     void icu4x_Locale_destroy_mv1(Locale* self);
-    
+
     } // extern "C"
 } // namespace capi
 } // namespace
@@ -70,8 +73,8 @@ inline diplomat::result<std::unique_ptr<icu4x::Locale>, icu4x::LocaleParseError>
   return result.is_ok ? diplomat::result<std::unique_ptr<icu4x::Locale>, icu4x::LocaleParseError>(diplomat::Ok<std::unique_ptr<icu4x::Locale>>(std::unique_ptr<icu4x::Locale>(icu4x::Locale::FromFFI(result.ok)))) : diplomat::result<std::unique_ptr<icu4x::Locale>, icu4x::LocaleParseError>(diplomat::Err<icu4x::LocaleParseError>(icu4x::LocaleParseError::FromFFI(result.err)));
 }
 
-inline std::unique_ptr<icu4x::Locale> icu4x::Locale::und() {
-  auto result = icu4x::capi::icu4x_Locale_und_mv1();
+inline std::unique_ptr<icu4x::Locale> icu4x::Locale::unknown() {
+  auto result = icu4x::capi::icu4x_Locale_unknown_mv1();
   return std::unique_ptr<icu4x::Locale>(icu4x::Locale::FromFFI(result));
 }
 
@@ -95,6 +98,13 @@ inline std::optional<std::string> icu4x::Locale::get_unicode_extension(std::stri
     {s.data(), s.size()},
     &write);
   return result.is_ok ? std::optional<std::string>(std::move(output)) : std::nullopt;
+}
+
+inline std::optional<std::monostate> icu4x::Locale::set_unicode_extension(std::string_view k, std::string_view v) {
+  auto result = icu4x::capi::icu4x_Locale_set_unicode_extension_mv1(this->AsFFI(),
+    {k.data(), k.size()},
+    {v.data(), v.size()});
+  return result.is_ok ? std::optional<std::monostate>() : std::nullopt;
 }
 
 inline std::string icu4x::Locale::language() const {
