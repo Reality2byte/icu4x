@@ -60,8 +60,8 @@ impl CoarseHourCycle {
     #[cfg(feature = "datagen")]
     pub fn apply_on_pattern<'data>(
         &self,
-        date_time: &provider::calendar::patterns::GenericLengthPatterns<'data>,
-        skeletons: &provider::calendar::DateSkeletonPatterns<'data>,
+        date_time: &provider::skeleton::GenericLengthPatterns<'data>,
+        skeletons: &provider::skeleton::DateSkeletonPatterns<'data>,
         pattern_str: &str,
         mut pattern: reference::Pattern,
     ) -> Option<reference::Pattern> {
@@ -104,8 +104,8 @@ impl CoarseHourCycle {
             // requested fields.
             true,
         ) {
-            skeleton::BestSkeleton::AllFieldsMatch(patterns)
-            | skeleton::BestSkeleton::MissingOrExtraFields(patterns) => {
+            skeleton::BestSkeleton::AllFieldsMatch(patterns, _)
+            | skeleton::BestSkeleton::MissingOrExtraFields(patterns, _) => {
                 Some(reference::Pattern::from(&patterns.expect_pattern(
                     "Only week-of patterns have plural variants",
                 )))

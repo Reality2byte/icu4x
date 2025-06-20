@@ -21,8 +21,16 @@ const REPO_VERSION: &str = "version.workspace = true";
 const COMPONENTS: &[(&str, &[DataMarkerInfo], &str)] = &[
     ("calendar", icu::calendar::provider::MARKERS, REPO_VERSION),
     ("casemap", icu::casemap::provider::MARKERS, REPO_VERSION),
-    ("collator", icu::collator::provider::MARKERS, REPO_VERSION),
-    ("datetime", icu::datetime::provider::MARKERS, REPO_VERSION),
+    (
+        "collator",
+        icu::collator::provider::MARKERS,
+        r#"version = "2.0.1""#,
+    ),
+    (
+        "datetime",
+        icu::datetime::provider::MARKERS,
+        r#"version = "2.0.1""#,
+    ),
     ("decimal", icu::decimal::provider::MARKERS, REPO_VERSION),
     ("list", icu::list::provider::MARKERS, REPO_VERSION),
     ("locale", icu::locale::provider::MARKERS, REPO_VERSION),
@@ -35,14 +43,14 @@ const COMPONENTS: &[(&str, &[DataMarkerInfo], &str)] = &[
     (
         "properties",
         icu::properties::provider::MARKERS,
-        REPO_VERSION,
+        r#"version = "2.0.1""#,
     ),
     ("segmenter", icu::segmenter::provider::MARKERS, REPO_VERSION),
-    ("time", icu::time::provider::MARKERS, REPO_VERSION),
+    ("time", icu::time::provider::MARKERS, r#"version = "2.0.1""#),
     (
         "experimental",
         icu::experimental::provider::MARKERS,
-        r#"version = "0.3.0-beta2""#,
+        r#"version = "0.3.0""#,
     ),
 ];
 
@@ -260,11 +268,15 @@ struct StubExporter<E>(E);
 impl<E: DataExporter> DataExporter for StubExporter<E> {
     fn put_payload(
         &self,
-        _marker: DataMarkerInfo,
-        _id: DataIdentifierBorrowed,
-        _payload: &DataPayload<ExportMarker>,
+        marker: DataMarkerInfo,
+        id: DataIdentifierBorrowed,
+        payload: &DataPayload<ExportMarker>,
     ) -> Result<(), DataError> {
-        Ok(())
+        if id.locale.is_unknown() && marker.expose_baked_consts {
+            self.0.put_payload(marker, id, payload)
+        } else {
+            Ok(())
+        }
     }
 
     fn flush_singleton(

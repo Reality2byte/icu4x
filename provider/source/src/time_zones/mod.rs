@@ -11,6 +11,8 @@ use core::hash::Hasher;
 use icu::datetime::provider::time_zones::*;
 use icu::locale::subtags::region;
 use icu::time::provider::*;
+use icu::time::zone::ZoneNameTimestamp;
+use icu::time::DateTime;
 use icu::time::Time;
 use icu_locale_core::subtags::Region;
 use icu_provider::prelude::*;
@@ -33,7 +35,7 @@ pub(crate) struct Caches {
     metazone_to_short: Cache<(BTreeMap<String, MetazoneId>, u64)>,
     primary_zones: Cache<BTreeMap<TimeZone, Region>>,
     mz_period: Cache<MetazonePeriod<'static>>,
-    offset_period: Cache<<TimeZoneOffsetsV1 as DynamicDataMarker>::DataStruct>,
+    offset_period: Cache<<TimezoneVariantsOffsetsV1 as DynamicDataMarker>::DataStruct>,
     reverse_metazones: Cache<BTreeMap<(MetazoneId, MzMembership), Vec<TimeZone>>>,
 }
 
@@ -44,6 +46,19 @@ enum MzMembership {
 }
 
 impl SourceDataProvider {
+    // Lists additional zones that haven't been added to CLDR yet.
+    // If data is generated with a TZDB that contains these zones, they are added.
+    fn future_zones(&self) -> Result<impl Iterator<Item = (String, TimeZone)> + '_, DataError> {
+        let tzdb = self.tzdb()?.transitions()?;
+        Ok([(
+            "America/Coyhaique",
+            TimeZone(icu::locale::subtags::subtag!("clcxq")),
+        )]
+        .into_iter()
+        .filter(|(i, _)| tzdb.get_zoneset(i).is_some())
+        .map(|(i, t)| (String::from(i), t)))
+    }
+
     fn reverse_metazones(
         &self,
     ) -> Result<&BTreeMap<(MetazoneId, MzMembership), Vec<TimeZone>>, DataError> {
@@ -63,20 +78,22 @@ impl SourceDataProvider {
                     use zerovec::ule::AsULE;
                     let mut mzs = c
                         .into_iter1_copied()
-                        .map(|(k, v)| (MinutesSinceEpoch::from_unaligned(*k), v))
+                        .map(|(k, v)| (ZoneNameTimestamp::from_unaligned(*k), v))
                         .peekable();
                     let mut offsets = offset_periods
                         .get0(&tz)
                         .unwrap()
                         .into_iter1_copied()
-                        .map(|(k, v)| (MinutesSinceEpoch::from_unaligned(*k), v))
+                        .map(|(k, v)| (ZoneNameTimestamp::from_unaligned(*k), v))
                         .peekable();
 
                     let mut curr_offset = offsets.next().unwrap();
                     let mut curr_mz = mzs.next().unwrap();
 
-                    let horizon =
-                        MinutesSinceEpoch::from((self.timezone_horizon, Time::start_of_day()));
+                    let horizon = ZoneNameTimestamp::from_date_time_iso(DateTime {
+                        date: self.timezone_horizon,
+                        time: Time::start_of_day(),
+                    });
 
                     while offsets.peek().is_some_and(|&(start, _)| start < horizon) {
                         curr_offset = offsets.next().unwrap();
@@ -89,7 +106,7 @@ impl SourceDataProvider {
                                 .or_default()
                                 .push(tz);
                             // The daylight name is only required if a zone usign this metazone actually observes DST
-                            if curr_offset.1 .1 != 0 {
+                            if curr_offset.1.daylight.is_some() {
                                 reverse_metazones
                                     .entry((mz, MzMembership::Daylight))
                                     .or_default()
@@ -164,6 +181,7 @@ impl SourceDataProvider {
                         );
                     }
                 }
+                bcp47_tzids.extend(self.future_zones()?);
                 Ok(bcp47_tzids)
             })
             .as_ref()
@@ -209,6 +227,7 @@ impl SourceDataProvider {
                         );
                     }
                 }
+                canonical_tzids.extend(self.future_zones()?.map(|(i, t)| (t, i)));
                 Ok(canonical_tzids)
             })
             .as_ref()
@@ -376,7 +395,7 @@ impl IterableDataProviderCached<TimezoneMetazonePeriodsV1> for SourceDataProvide
     }
 }
 
-impl IterableDataProviderCached<TimeZoneOffsetsV1> for SourceDataProvider {
+impl IterableDataProviderCached<TimezoneVariantsOffsetsV1> for SourceDataProvider {
     fn iter_ids_cached(&self) -> Result<HashSet<DataIdentifierCow<'static>>, DataError> {
         Ok(HashSet::from_iter([Default::default()]))
     }

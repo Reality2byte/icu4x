@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 
 
@@ -18,14 +19,14 @@ namespace capi {
       YearStyle_Full = 1,
       YearStyle_WithEra = 2,
     };
-    
+
     typedef struct YearStyle_option {union { YearStyle ok; }; bool is_ok; } YearStyle_option;
 } // namespace capi
 } // namespace
 
 namespace icu4x {
 /**
- * See the [Rust documentation for `YearStyle`](https://docs.rs/icu/latest/icu/datetime/options/enum.YearStyle.html) for more information.
+ * See the [Rust documentation for `YearStyle`](https://docs.rs/icu/2.0.0/icu/datetime/options/enum.YearStyle.html) for more information.
  */
 class YearStyle {
 public:
@@ -35,7 +36,8 @@ public:
     WithEra = 2,
   };
 
-  YearStyle() = default;
+  YearStyle(): value(Value::Auto) {}
+
   // Implicit conversions between enum and ::Value
   constexpr YearStyle(Value v) : value(v) {}
   constexpr operator Value() const { return value; }

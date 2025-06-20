@@ -5,15 +5,15 @@
 extern crate alloc;
 use core::num::NonZeroU8;
 
+use alloc::string::String;
 use alloc::vec::Vec;
 
 use crate::{
-    parsers::{
-        records::{
-            Annotation, DateRecord, Fraction, IxdtfParseRecord, TimeRecord, TimeZoneAnnotation,
-            TimeZoneRecord, UtcOffsetRecordOrZ,
-        },
-        IxdtfParser,
+    core::Utf16,
+    parsers::IxdtfParser,
+    records::{
+        Annotation, DateRecord, Fraction, IxdtfParseRecord, TimeRecord, TimeZoneAnnotation,
+        TimeZoneRecord, UtcOffsetRecordOrZ,
     },
     ParseError,
 };
@@ -542,9 +542,9 @@ fn temporal_valid_instant_strings() {
 #[test]
 #[cfg(feature = "duration")]
 fn temporal_duration_parsing() {
-    use crate::parsers::{
+    use crate::{
+        parsers::IsoDurationParser,
         records::{DateDurationRecord, DurationParseRecord, Sign, TimeDurationRecord},
-        IsoDurationParser,
     };
 
     let durations = [
@@ -646,9 +646,9 @@ fn maximum_duration_fraction() {
 #[test]
 #[cfg(feature = "duration")]
 fn duration_fraction_extended() {
-    use crate::parsers::{
+    use crate::{
+        parsers::IsoDurationParser,
         records::{DurationParseRecord, Sign, TimeDurationRecord},
-        IsoDurationParser,
     };
     let test = "PT1H1.123456789123M";
     let result = IsoDurationParser::from_str(test).parse();
@@ -684,6 +684,7 @@ fn duration_exceeds_range() {
 }
 
 #[test]
+#[cfg(feature = "duration")]
 fn maximum_duration_units() {
     use crate::parsers::IsoDurationParser;
 
@@ -1013,7 +1014,7 @@ fn test_zulu_offset() {
                 second: 0,
                 fraction: None,
             }),
-            offset: Some(crate::parsers::records::UtcOffsetRecordOrZ::Z),
+            offset: Some(crate::records::UtcOffsetRecordOrZ::Z),
             tz: Some(TimeZoneAnnotation {
                 critical: false,
                 tz: TimeZoneRecord::Name("America/Chicago".as_bytes())
@@ -1075,7 +1076,7 @@ fn invalid_offset() {
     let err = IxdtfParser::from_str(offset_leap_second).parse();
     assert_eq!(
         err,
-        Err(ParseError::AnnotationClose),
+        Err(ParseError::InvalidMinutePrecisionOffset),
         "Should enforce UtcMinutePrecision for annotations"
     );
 
@@ -1083,7 +1084,7 @@ fn invalid_offset() {
     let err = IxdtfParser::from_str(offset_leap_second).parse();
     assert_eq!(
         err,
-        Err(ParseError::AnnotationClose),
+        Err(ParseError::InvalidMinutePrecisionOffset),
         "Should enforce UtcMinutePrecision for annotations"
     );
 }
@@ -1392,4 +1393,35 @@ fn tz_parser_offset_invalid() {
         .parse_offset()
         .unwrap_err();
     assert_eq!(err, ParseError::UtcTimeSeparator);
+}
+
+#[test]
+fn utf16_basic_test() {
+    let utf16: Vec<u16> = "2020-04-08[America/Chicago]"
+        .as_bytes()
+        .iter()
+        .copied()
+        .map(u16::from)
+        .collect();
+    let result = IxdtfParser::<Utf16>::new(&utf16).parse();
+    let id = match result {
+        Ok(IxdtfParseRecord {
+            date:
+                Some(DateRecord {
+                    year: 2020,
+                    month: 4,
+                    day: 8,
+                }),
+            time: None,
+            offset: None,
+            tz:
+                Some(TimeZoneAnnotation {
+                    critical: false,
+                    tz: TimeZoneRecord::Name(id),
+                }),
+            calendar: None,
+        }) => id,
+        _ => unreachable!(),
+    };
+    assert_eq!(String::from_utf16_lossy(id), "America/Chicago");
 }

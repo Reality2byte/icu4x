@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 
 
@@ -19,14 +20,14 @@ namespace capi {
       DecimalGroupingStrategy_Always = 2,
       DecimalGroupingStrategy_Min2 = 3,
     };
-    
+
     typedef struct DecimalGroupingStrategy_option {union { DecimalGroupingStrategy ok; }; bool is_ok; } DecimalGroupingStrategy_option;
 } // namespace capi
 } // namespace
 
 namespace icu4x {
 /**
- * See the [Rust documentation for `GroupingStrategy`](https://docs.rs/icu/latest/icu/decimal/options/enum.GroupingStrategy.html) for more information.
+ * See the [Rust documentation for `GroupingStrategy`](https://docs.rs/icu/2.0.0/icu/decimal/options/enum.GroupingStrategy.html) for more information.
  */
 class DecimalGroupingStrategy {
 public:
@@ -37,7 +38,8 @@ public:
     Min2 = 3,
   };
 
-  DecimalGroupingStrategy() = default;
+  DecimalGroupingStrategy(): value(Value::Auto) {}
+
   // Implicit conversions between enum and ::Value
   constexpr DecimalGroupingStrategy(Value v) : value(v) {}
   constexpr operator Value() const { return value; }
