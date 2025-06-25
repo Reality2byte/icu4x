@@ -10,6 +10,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 #include "DataError.hpp"
 #include "DataProvider.hpp"
@@ -18,30 +19,29 @@
 namespace icu4x {
 namespace capi {
     extern "C" {
-    
+
     icu4x::capi::ComposingNormalizer* icu4x_ComposingNormalizer_create_nfc_mv1(void);
-    
+
     typedef struct icu4x_ComposingNormalizer_create_nfc_with_provider_mv1_result {union {icu4x::capi::ComposingNormalizer* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_ComposingNormalizer_create_nfc_with_provider_mv1_result;
     icu4x_ComposingNormalizer_create_nfc_with_provider_mv1_result icu4x_ComposingNormalizer_create_nfc_with_provider_mv1(const icu4x::capi::DataProvider* provider);
-    
+
     icu4x::capi::ComposingNormalizer* icu4x_ComposingNormalizer_create_nfkc_mv1(void);
-    
+
     typedef struct icu4x_ComposingNormalizer_create_nfkc_with_provider_mv1_result {union {icu4x::capi::ComposingNormalizer* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_ComposingNormalizer_create_nfkc_with_provider_mv1_result;
     icu4x_ComposingNormalizer_create_nfkc_with_provider_mv1_result icu4x_ComposingNormalizer_create_nfkc_with_provider_mv1(const icu4x::capi::DataProvider* provider);
-    
+
     void icu4x_ComposingNormalizer_normalize_mv1(const icu4x::capi::ComposingNormalizer* self, diplomat::capi::DiplomatStringView s, diplomat::capi::DiplomatWrite* write);
-    
+
     bool icu4x_ComposingNormalizer_is_normalized_utf8_mv1(const icu4x::capi::ComposingNormalizer* self, diplomat::capi::DiplomatStringView s);
-    
+
     bool icu4x_ComposingNormalizer_is_normalized_utf16_mv1(const icu4x::capi::ComposingNormalizer* self, diplomat::capi::DiplomatString16View s);
-    
+
     size_t icu4x_ComposingNormalizer_is_normalized_utf8_up_to_mv1(const icu4x::capi::ComposingNormalizer* self, diplomat::capi::DiplomatStringView s);
-    
+
     size_t icu4x_ComposingNormalizer_is_normalized_utf16_up_to_mv1(const icu4x::capi::ComposingNormalizer* self, diplomat::capi::DiplomatString16View s);
-    
-    
+
     void icu4x_ComposingNormalizer_destroy_mv1(ComposingNormalizer* self);
-    
+
     } // extern "C"
 } // namespace capi
 } // namespace
@@ -73,6 +73,13 @@ inline std::string icu4x::ComposingNormalizer::normalize(std::string_view s) con
     {s.data(), s.size()},
     &write);
   return output;
+}
+template<typename W>
+inline void icu4x::ComposingNormalizer::normalize_write(std::string_view s, W& writeable) const {
+  diplomat::capi::DiplomatWrite write = diplomat::WriteTrait<W>::Construct(writeable);
+  icu4x::capi::icu4x_ComposingNormalizer_normalize_mv1(this->AsFFI(),
+    {s.data(), s.size()},
+    &write);
 }
 
 inline bool icu4x::ComposingNormalizer::is_normalized(std::string_view s) const {

@@ -10,6 +10,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 #include "DataProvider.hpp"
 #include "DateTimeAlignment.hpp"
@@ -25,61 +26,60 @@
 namespace icu4x {
 namespace capi {
     extern "C" {
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_specific_long_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_specific_long_mv1_result;
     icu4x_ZonedTimeFormatter_create_specific_long_mv1_result icu4x_ZonedTimeFormatter_create_specific_long_mv1(const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_specific_long_with_provider_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_specific_long_with_provider_mv1_result;
     icu4x_ZonedTimeFormatter_create_specific_long_with_provider_mv1_result icu4x_ZonedTimeFormatter_create_specific_long_with_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_specific_short_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_specific_short_mv1_result;
     icu4x_ZonedTimeFormatter_create_specific_short_mv1_result icu4x_ZonedTimeFormatter_create_specific_short_mv1(const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_specific_short_with_provider_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_specific_short_with_provider_mv1_result;
     icu4x_ZonedTimeFormatter_create_specific_short_with_provider_mv1_result icu4x_ZonedTimeFormatter_create_specific_short_with_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_localized_offset_long_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_localized_offset_long_mv1_result;
     icu4x_ZonedTimeFormatter_create_localized_offset_long_mv1_result icu4x_ZonedTimeFormatter_create_localized_offset_long_mv1(const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_localized_offset_long_with_provider_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_localized_offset_long_with_provider_mv1_result;
     icu4x_ZonedTimeFormatter_create_localized_offset_long_with_provider_mv1_result icu4x_ZonedTimeFormatter_create_localized_offset_long_with_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_localized_offset_short_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_localized_offset_short_mv1_result;
     icu4x_ZonedTimeFormatter_create_localized_offset_short_mv1_result icu4x_ZonedTimeFormatter_create_localized_offset_short_mv1(const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_localized_offset_short_with_provider_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_localized_offset_short_with_provider_mv1_result;
     icu4x_ZonedTimeFormatter_create_localized_offset_short_with_provider_mv1_result icu4x_ZonedTimeFormatter_create_localized_offset_short_with_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_generic_long_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_generic_long_mv1_result;
     icu4x_ZonedTimeFormatter_create_generic_long_mv1_result icu4x_ZonedTimeFormatter_create_generic_long_mv1(const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_generic_long_with_provider_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_generic_long_with_provider_mv1_result;
     icu4x_ZonedTimeFormatter_create_generic_long_with_provider_mv1_result icu4x_ZonedTimeFormatter_create_generic_long_with_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_generic_short_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_generic_short_mv1_result;
     icu4x_ZonedTimeFormatter_create_generic_short_mv1_result icu4x_ZonedTimeFormatter_create_generic_short_mv1(const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_generic_short_with_provider_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_generic_short_with_provider_mv1_result;
     icu4x_ZonedTimeFormatter_create_generic_short_with_provider_mv1_result icu4x_ZonedTimeFormatter_create_generic_short_with_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_location_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_location_mv1_result;
     icu4x_ZonedTimeFormatter_create_location_mv1_result icu4x_ZonedTimeFormatter_create_location_mv1(const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_location_with_provider_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_location_with_provider_mv1_result;
     icu4x_ZonedTimeFormatter_create_location_with_provider_mv1_result icu4x_ZonedTimeFormatter_create_location_with_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_exemplar_city_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_exemplar_city_mv1_result;
     icu4x_ZonedTimeFormatter_create_exemplar_city_mv1_result icu4x_ZonedTimeFormatter_create_exemplar_city_mv1(const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_create_exemplar_city_with_provider_mv1_result {union {icu4x::capi::ZonedTimeFormatter* ok; icu4x::capi::DateTimeFormatterLoadError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_create_exemplar_city_with_provider_mv1_result;
     icu4x_ZonedTimeFormatter_create_exemplar_city_with_provider_mv1_result icu4x_ZonedTimeFormatter_create_exemplar_city_with_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::DateTimeLength_option length, icu4x::capi::TimePrecision_option time_precision, icu4x::capi::DateTimeAlignment_option alignment);
-    
+
     typedef struct icu4x_ZonedTimeFormatter_format_mv1_result {union { icu4x::capi::DateTimeWriteError err;}; bool is_ok;} icu4x_ZonedTimeFormatter_format_mv1_result;
     icu4x_ZonedTimeFormatter_format_mv1_result icu4x_ZonedTimeFormatter_format_mv1(const icu4x::capi::ZonedTimeFormatter* self, const icu4x::capi::Time* time, const icu4x::capi::TimeZoneInfo* zone, diplomat::capi::DiplomatWrite* write);
-    
-    
+
     void icu4x_ZonedTimeFormatter_destroy_mv1(ZonedTimeFormatter* self);
-    
+
     } // extern "C"
 } // namespace capi
 } // namespace
@@ -228,6 +228,15 @@ inline diplomat::result<std::string, icu4x::DateTimeWriteError> icu4x::ZonedTime
     zone.AsFFI(),
     &write);
   return result.is_ok ? diplomat::result<std::string, icu4x::DateTimeWriteError>(diplomat::Ok<std::string>(std::move(output))) : diplomat::result<std::string, icu4x::DateTimeWriteError>(diplomat::Err<icu4x::DateTimeWriteError>(icu4x::DateTimeWriteError::FromFFI(result.err)));
+}
+template<typename W>
+inline diplomat::result<std::monostate, icu4x::DateTimeWriteError> icu4x::ZonedTimeFormatter::format_write(const icu4x::Time& time, const icu4x::TimeZoneInfo& zone, W& writeable) const {
+  diplomat::capi::DiplomatWrite write = diplomat::WriteTrait<W>::Construct(writeable);
+  auto result = icu4x::capi::icu4x_ZonedTimeFormatter_format_mv1(this->AsFFI(),
+    time.AsFFI(),
+    zone.AsFFI(),
+    &write);
+  return result.is_ok ? diplomat::result<std::monostate, icu4x::DateTimeWriteError>(diplomat::Ok<std::monostate>()) : diplomat::result<std::monostate, icu4x::DateTimeWriteError>(diplomat::Err<icu4x::DateTimeWriteError>(icu4x::DateTimeWriteError::FromFFI(result.err)));
 }
 
 inline const icu4x::capi::ZonedTimeFormatter* icu4x::ZonedTimeFormatter::AsFFI() const {

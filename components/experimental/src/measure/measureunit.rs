@@ -2,9 +2,7 @@
 // called LICENSE at the top level of the ICU4X source tree
 // (online at: https://github.com/unicode-org/icu4x/blob/main/LICENSE ).
 
-use smallvec::SmallVec;
-
-use super::provider::single_unit::SingleUnit;
+use super::{provider::single_unit::SingleUnit, single_unit_vec::SingleUnitVec};
 
 // TODO NOTE: the MeasureUnitParser takes the trie and the ConverterFactory takes the full payload and an instance of MeasureUnitParser.
 /// The [`MeasureUnit`] struct represents a processed CLDR compound unit.
@@ -16,10 +14,10 @@ use super::provider::single_unit::SingleUnit;
 ///  5. `square-meter` (Note: a single unit is a special case of a compound unit containing only one single unit.)
 ///
 /// To construct a [`MeasureUnit`] from a CLDR unit identifier, use the [`crate::measure::parser::MeasureUnitParser`].
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct MeasureUnit {
     /// Contains the processed units.
-    pub(crate) single_units: SmallVec<[SingleUnit; 8]>,
+    pub(crate) single_units: SingleUnitVec,
 
     /// Represents the constant denominator of this measure unit.
     ///
@@ -34,16 +32,16 @@ pub struct MeasureUnit {
 }
 
 impl MeasureUnit {
-    /// Returns a reference to the single units contained within this measure unit.
-    pub fn get_single_units(&self) -> &SmallVec<[SingleUnit; 8]> {
-        &self.single_units
+    /// Returns a slice of the single units contained within this measure unit.
+    pub fn single_units(&self) -> &[SingleUnit] {
+        self.single_units.as_slice()
     }
 
     /// Returns the constant denominator of this measure unit.
     ///
     /// NOTE:
     ///   If the constant denominator is not set, a value of `0` is returned.
-    pub fn get_constant_denominator(&self) -> u64 {
+    pub fn constant_denominator(&self) -> u64 {
         self.constant_denominator
     }
 }

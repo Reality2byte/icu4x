@@ -5,7 +5,7 @@
 //! Functions for region-specific weekday information.
 
 use crate::{error::RangeError, provider::*, types::Weekday};
-use icu_locale_core::preferences::define_preferences;
+use icu_locale_core::preferences::{define_preferences, extensions::unicode::keywords::FirstDay};
 use icu_provider::prelude::*;
 
 /// Minimum number of days in a month unit required for using this module
@@ -15,7 +15,10 @@ define_preferences!(
     /// The preferences for the week information.
     [Copy]
     WeekPreferences,
-    {}
+    {
+        /// The first day of the week
+        first_weekday: FirstDay
+    }
 );
 
 /// Information about the first day of the week and the weekend.
@@ -46,7 +49,16 @@ impl WeekInformation {
                 ..Default::default()
             })
             .map(|response| WeekInformation {
-                first_weekday: response.payload.get().first_weekday,
+                first_weekday: match prefs.first_weekday {
+                    Some(FirstDay::Mon) => Weekday::Monday,
+                    Some(FirstDay::Tue) => Weekday::Tuesday,
+                    Some(FirstDay::Wed) => Weekday::Wednesday,
+                    Some(FirstDay::Thu) => Weekday::Thursday,
+                    Some(FirstDay::Fri) => Weekday::Friday,
+                    Some(FirstDay::Sat) => Weekday::Saturday,
+                    Some(FirstDay::Sun) => Weekday::Sunday,
+                    _ => response.payload.get().first_weekday,
+                },
                 weekend: response.payload.get().weekend,
             })
     }
@@ -132,7 +144,7 @@ fn add_to_weekday(weekday: Weekday, num_days: i32) -> Weekday {
 /// Which year or month that a calendar assigns a week to relative to the year/month
 /// the week is in.
 #[derive(Clone, Copy, Debug, PartialEq)]
-#[allow(clippy::enum_variant_names)]
+#[expect(clippy::enum_variant_names)]
 enum RelativeWeek {
     /// A week that is assigned to the last week of the previous year/month. e.g. 2021-01-01 is week 54 of 2020 per the ISO calendar.
     LastWeekOfPreviousUnit,
@@ -525,6 +537,32 @@ mod tests {
 }
 
 #[test]
+fn test_first_day() {
+    use icu_locale_core::locale;
+
+    assert_eq!(
+        WeekInformation::try_new(locale!("und-US").into())
+            .unwrap()
+            .first_weekday,
+        Weekday::Sunday,
+    );
+
+    assert_eq!(
+        WeekInformation::try_new(locale!("und-FR").into())
+            .unwrap()
+            .first_weekday,
+        Weekday::Monday,
+    );
+
+    assert_eq!(
+        WeekInformation::try_new(locale!("und-FR-u-fw-tue").into())
+            .unwrap()
+            .first_weekday,
+        Weekday::Tuesday,
+    );
+}
+
+#[test]
 fn test_weekend() {
     use icu_locale_core::locale;
 
@@ -608,7 +646,7 @@ fn test_iso_weeks() {
     use crate::types::IsoWeekOfYear;
     use crate::Date;
 
-    #[allow(clippy::zero_prefixed_literal)]
+    #[expect(clippy::zero_prefixed_literal)]
     for ((y, m, d), (iso_year, week_number)) in [
         // 2010 starts on a Thursday, so 2009 has 53 ISO weeks
         ((2009, 12, 30), (2009, 53)),

@@ -12,6 +12,8 @@ use displaydoc::Display;
 pub enum ParseError {
     #[displaydoc("Implementation error: this error must not throw.")]
     ImplAssert,
+    #[displaydoc("Code point was not ASCII")]
+    NonAsciiCodePoint,
     #[displaydoc("Invalid float while parsing fraction part.")]
     ParseFloat,
     #[displaydoc("Parsing ended abruptly while parsing {location}")]
@@ -72,6 +74,8 @@ pub enum ParseError {
     AnnotationValueCharPostHyphen,
     #[displaydoc("Invalid annotation value character.")]
     AnnotationValueChar,
+    #[displaydoc("Offset must be minute precision")]
+    InvalidMinutePrecisionOffset,
 
     // Duplicate calendar with critical.
     #[displaydoc("Duplicate calendars cannot be provided when one is critical.")]
