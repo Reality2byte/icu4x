@@ -16,12 +16,15 @@ pub mod ffi {
     #[diplomat::enum_convert(icu_locale::TransformResult)]
     pub enum TransformResult {
         Modified,
+        // This is an output type, so the default mostly impacts deferred initialization.
+        #[diplomat::attr(auto, default)]
         Unmodified,
     }
 
     /// A locale canonicalizer.
     #[diplomat::rust_link(icu::locale::LocaleCanonicalizer, Struct)]
     #[diplomat::opaque]
+    #[diplomat::demo(custom_func = "../../../tools/web-demo/custom/LocaleCanonicalizer.mjs")]
     pub struct LocaleCanonicalizer(icu_locale::LocaleCanonicalizer);
 
     impl LocaleCanonicalizer {

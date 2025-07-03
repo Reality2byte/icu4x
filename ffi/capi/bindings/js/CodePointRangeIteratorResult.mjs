@@ -3,37 +3,29 @@ import wasm from "./diplomat-wasm.mjs";
 import * as diplomatRuntime from "./diplomat-runtime.mjs";
 
 
-/** 
- * Result of a single iteration of [`CodePointRangeIterator`].
+
+/**
+ * Result of a single iteration of {@link CodePointRangeIterator}.
  * Logically can be considered to be an `Option<RangeInclusive<DiplomatChar>>`,
  *
- * `start` and `end` represent an inclusive range of code points [start, end],
+ * `start` and `end` represent an inclusive range of code points `[start, end]`,
  * and `done` will be true if the iterator has already finished. The last contentful
- * iteration will NOT produce a range done=true, in other words `start` and `end` are useful
+ * iteration will NOT produce a range `done=true`, in other words `start` and `end` are useful
  * values if and only if `done=false`.
  */
-
-
 export class CodePointRangeIteratorResult {
-    
     #start;
-    
-    get start()  {
+    get start() {
         return this.#start;
     }
-    
     #end;
-    
-    get end()  {
+    get end() {
         return this.#end;
     }
-    
     #done;
-    
-    get done()  {
+    get done() {
         return this.#done;
     }
-    
     #internalConstructor(structObj, internalConstructor) {
         if (typeof structObj !== "object") {
             throw new Error("CodePointRangeIteratorResult's constructor takes an object of CodePointRangeIteratorResult's fields.");
@@ -65,12 +57,17 @@ export class CodePointRangeIteratorResult {
 
     // Return this struct in FFI function friendly format.
     // Returns an array that can be expanded with spread syntax (...)
-    
     _intoFFI(
         functionCleanupArena,
         appendArrayMap
     ) {
-        return [this.#start, this.#end, this.#done, /* [3 x i8] padding */ 0, 0, 0 /* end padding */]
+        let buffer = diplomatRuntime.DiplomatBuf.struct(wasm, 12, 4);
+
+        this._writeToArrayBuffer(wasm.memory.buffer, buffer.ptr, functionCleanupArena, appendArrayMap);
+
+        functionCleanupArena.alloc(buffer);
+
+        return buffer.ptr;
     }
 
     static _fromSuppliedValue(internalConstructor, obj) {
@@ -115,6 +112,7 @@ export class CodePointRangeIteratorResult {
 
         return new CodePointRangeIteratorResult(structObj, internalConstructor);
     }
+
 
     constructor(structObj, internalConstructor) {
         return this.#internalConstructor(...arguments)

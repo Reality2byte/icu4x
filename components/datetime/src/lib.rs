@@ -33,19 +33,6 @@
 //!
 //! Not all inputs are valid for all field sets.
 //!
-//! # Binary Size Tradeoffs
-//!
-//! The datetime crate has been engineered with a focus on giving developers the ability to
-//! tune binary size to their needs. The table illustrates the two main tradeoffs, field sets
-//! and calendar systems:
-//!
-//! | Factor | Static (Lower Binary Size) | Dynamic (Greater Binary Size) |
-//! |---|---|---|
-//! | Field Sets | Specific [`fieldsets`] types | Enumerations from [`fieldsets::enums`] |
-//! | Calendar Systems | [`FixedCalendarDateTimeFormatter`] | [`DateTimeFormatter`] |
-//!
-//! If formatting times and time zones without dates, consider using [`NoCalendarFormatter`].
-//!
 //! # Examples
 //!
 //! ```
@@ -57,11 +44,12 @@
 //! use writeable::assert_writeable_eq;
 //!
 //! // Field set for year, month, day, hour, and minute with a medium length:
-//! let field_set = fieldsets::YMD::medium().with_time_hm();
+//! let field_set_with_options = fieldsets::YMD::medium().with_time_hm();
 //!
 //! // Create a formatter for Argentinian Spanish:
 //! let locale = locale!("es-AR");
-//! let dtf = DateTimeFormatter::try_new(locale.into(), field_set).unwrap();
+//! let dtf = DateTimeFormatter::try_new(locale.into(), field_set_with_options)
+//!     .unwrap();
 //!
 //! // Format something:
 //! let datetime = DateTime {
@@ -72,6 +60,50 @@
 //!
 //! assert_writeable_eq!(formatted_date, "15 de ene de 2025, 4:09 p. m.");
 //! ```
+//!
+//! # Binary Size Considerations
+//!
+//! ## Avoid linking unnecessary field sets data
+//!
+//! There are two APIs for fieldsets:
+//! * "static" field sets, like [`fieldsets::YMD`], where each field set is a *type*.
+//! * "dynamic" field sets, like [`fieldsets::enums::CompositeFieldSet`], where each field set is a *value*.
+//!
+//! While dynamic fields sets may offer a more powerful API, using them in constructors links data for all
+//! possible values, i.e. all patterns, that the dynamic field set can represent, even if they are
+//! unreachable in code.
+//!
+//! Static field sets on the other hand leverage the type system to let the compiler drop unneeded data.
+//!
+//! ### Example
+//!
+//! ```
+//! use icu::datetime::DateTimeFormatter;
+//! use icu::datetime::fieldsets::YMD;
+//! use icu::datetime::fieldsets::enums::{CompositeFieldSet, DateFieldSet};
+//!
+//! // This constructor only links data required for YMD
+//! let a: DateTimeFormatter<YMD> =
+//!     DateTimeFormatter::try_new(Default::default(), YMD::medium()).unwrap();
+//!
+//! // This constructor links data for *all possible field sets*, even though we only use YMD
+//! let b: DateTimeFormatter<CompositeFieldSet> =
+//!     DateTimeFormatter::try_new(Default::default(), CompositeFieldSet::Date(DateFieldSet::YMD(YMD::medium()))).unwrap();
+//!
+//! // If a DateTimeFormatter<CompositeFieldSet> is required, cast after construction instead:
+//! let c: DateTimeFormatter<CompositeFieldSet> =  a.cast_into_fset::<CompositeFieldSet>();
+//! ```
+//!
+//! ## Avoid linking unnecessary calendar data
+//!
+//! All field sets that contain dates use different data for each calendar system when used with [`DateTimeFormatter`].
+//! This is good i18n practice, as in general the calendar system should be derived from the user locale,
+//! not fixed in code. However, there are legitimate use cases where only one calendar system is supported,
+//! in which case [`DateTimeFormatter`] would link unused data. In this case [`FixedCalendarDateTimeFormatter`]
+//! can be used, which is generic in a calendar type and only links the data for that calendar.
+//!
+//! Using [`FixedCalendarDateTimeFormatter`] also avoids linking code that converts inputs to the user's calendar.
+//! For field sets that don't contain dates, this can also be achieved using [`NoCalendarFormatter`].
 
 // https://github.com/unicode-org/icu4x/blob/main/documents/process/boilerplate.md#library-annotations
 #![cfg_attr(not(any(test, doc)), no_std)]
@@ -105,18 +137,14 @@ pub mod provider;
 pub(crate) mod raw;
 pub mod scaffold;
 pub(crate) mod size_test_macro;
+pub mod unchecked;
 
-pub use error::{
-    DateTimeFormatterLoadError, DateTimeWriteError, MismatchedCalendarError,
-    UnsupportedCalendarError,
-};
+pub use error::{DateTimeFormatterLoadError, MismatchedCalendarError};
 
-pub use format::DateTimeInputUnchecked;
 pub use neo::DateTimeFormatter;
 pub use neo::DateTimeFormatterPreferences;
 pub use neo::FixedCalendarDateTimeFormatter;
 pub use neo::FormattedDateTime;
-pub use neo::FormattedDateTimeUnchecked;
 pub use neo::NoCalendarFormatter;
 
 /// Locale preferences used by this crate
