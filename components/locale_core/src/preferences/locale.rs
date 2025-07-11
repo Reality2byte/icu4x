@@ -121,7 +121,7 @@ impl From<LocalePreferences> for crate::Locale {
                     );
                 }
                 if let Some(rg) = prefs.ue_region {
-                    #[allow(clippy::unwrap_used)] // Region is a valid Subtag
+                    #[expect(clippy::unwrap_used)] // Region is a valid Subtag
                     extensions.unicode.keywords.set(
                         crate::extensions::unicode::key!("rg"),
                         crate::extensions::unicode::Value::try_from_str(rg.as_str()).unwrap(),
@@ -137,7 +137,7 @@ impl LocalePreferences {
     /// Constructs a new [`LocalePreferences`] struct with the defaults.
     pub const fn default() -> Self {
         Self {
-            language: Language::default(),
+            language: Language::UNKNOWN,
             script: None,
             region: None,
             variant: None,
@@ -158,7 +158,7 @@ impl LocalePreferences {
 
     /// Extends the preferences with the values from another set of preferences.
     pub fn extend(&mut self, other: LocalePreferences) {
-        if !other.language.is_default() {
+        if !other.language.is_unknown() {
             self.language = other.language;
         }
         if let Some(script) = other.script {

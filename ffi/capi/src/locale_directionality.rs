@@ -16,9 +16,12 @@ pub mod ffi {
     use crate::unstable::locale_core::ffi::Locale;
 
     #[diplomat::rust_link(icu::locale::Direction, Enum)]
+    #[non_exhaustive]
     pub enum LocaleDirection {
         LeftToRight,
         RightToLeft,
+        // This is an output type, so the default mostly impacts deferred initialization.
+        #[diplomat::attr(auto, default)]
         Unknown,
     }
 
@@ -94,11 +97,13 @@ pub mod ffi {
         }
 
         #[diplomat::rust_link(icu::locale::LocaleDirectionality::is_left_to_right, FnInStruct)]
+        #[diplomat::attr(demo_gen, disable)] // covered by `get`
         pub fn is_left_to_right(&self, locale: &Locale) -> bool {
             self.0.is_left_to_right(&locale.0.id)
         }
 
         #[diplomat::rust_link(icu::locale::LocaleDirectionality::is_right_to_left, FnInStruct)]
+        #[diplomat::attr(demo_gen, disable)] // covered by `get`
         pub fn is_right_to_left(&self, locale: &Locale) -> bool {
             self.0.is_right_to_left(&locale.0.id)
         }

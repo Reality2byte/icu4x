@@ -5,6 +5,7 @@
 //! High-level entrypoints for Neo DateTime Formatter
 
 use crate::error::DateTimeFormatterLoadError;
+use crate::external_loaders::*;
 use crate::fieldsets::builder::FieldSetBuilder;
 use crate::fieldsets::enums::CompositeFieldSet;
 use crate::format::datetime::try_write_pattern_items;
@@ -19,14 +20,13 @@ use crate::scaffold::{
 };
 use crate::size_test_macro::size_test;
 use crate::MismatchedCalendarError;
-use crate::{external_loaders::*, DateTimeWriteError};
 use core::fmt;
 use core::marker::PhantomData;
 use icu_calendar::{preferences::CalendarPreferences, AnyCalendar, IntoAnyCalendar};
 use icu_decimal::DecimalFormatterPreferences;
 use icu_locale_core::preferences::{define_preferences, prefs_convert};
 use icu_provider::prelude::*;
-use writeable::{impl_display_with_writeable, TryWriteable, Writeable};
+use writeable::{impl_display_with_writeable, Writeable};
 
 define_preferences!(
     /// The user locale preferences for datetime formatting.
@@ -78,6 +78,23 @@ define_preferences!(
     }
 );
 
+#[test]
+fn prefs() {
+    use icu_locale::locale;
+    assert_eq!(
+        DateTimeFormatterPreferences::from_locale_strict(&locale!("en-US-u-hc-h23"))
+            .unwrap()
+            .hour_cycle,
+        Some(HourCycle::H23)
+    );
+    assert_eq!(
+        DateTimeFormatterPreferences::from_locale_strict(&locale!("en-US-u-hc-h24"))
+            .unwrap_err()
+            .hour_cycle,
+        None
+    );
+}
+
 prefs_convert!(DateTimeFormatterPreferences, DecimalFormatterPreferences, {
     numbering_system
 });
@@ -94,7 +111,7 @@ macro_rules! gen_buffer_constructors_with_external_loader {
         pub fn $buffer_fn<P>(
             provider: &P,
             prefs: DateTimeFormatterPreferences,
-            field_set: $fset,
+            field_set_with_options: $fset,
         ) -> Result<Self, DateTimeFormatterLoadError>
         where
             P: BufferProvider + ?Sized,
@@ -103,7 +120,7 @@ macro_rules! gen_buffer_constructors_with_external_loader {
                 &provider.as_deserializing(),
                 &ExternalLoaderBuffer(provider),
                 prefs,
-                field_set.get_field(),
+                field_set_with_options.get_field(),
             )
         }
     };
@@ -113,7 +130,7 @@ macro_rules! gen_buffer_constructors_with_external_loader {
         pub fn $buffer_fn<P>(
             provider: &P,
             prefs: DateTimeFormatterPreferences,
-            field_set: $fset,
+            field_set_with_options: $fset,
         ) -> Result<Self, DateTimeFormatterLoadError>
         where
             P: BufferProvider + ?Sized,
@@ -122,7 +139,7 @@ macro_rules! gen_buffer_constructors_with_external_loader {
                 &provider.as_deserializing(),
                 &ExternalLoaderBuffer(provider),
                 prefs,
-                field_set.get_field(),
+                field_set_with_options.get_field(),
             )
         }
     };
@@ -202,7 +219,7 @@ size_test!(FixedCalendarDateTimeFormatter<icu_calendar::Gregorian, crate::fields
 #[doc = typed_neo_year_month_day_formatter_size!()]
 #[derive(Debug, Clone)]
 pub struct FixedCalendarDateTimeFormatter<C: CldrCalendar, FSet: DateTimeNamesMarker> {
-    selection: DateTimeZonePatternSelectionData,
+    pub(crate) selection: DateTimeZonePatternSelectionData,
     pub(crate) names: RawDateTimeNames<FSet>,
     _calendar: PhantomData<C>,
 }
@@ -219,10 +236,14 @@ where
     ///
     /// This ignores the `calendar_kind` preference and instead uses the static calendar type,
     /// and supports calendars that are not expressible as preferences, such as [`JapaneseExtended`](icu_calendar::cal::JapaneseExtended).
+    ///
+    /// ✨ *Enabled with the `compiled_data` Cargo feature.*
+    ///
+    /// [📚 Help choosing a constructor](icu_provider::constructors)
     #[cfg(feature = "compiled_data")]
     pub fn try_new(
         prefs: DateTimeFormatterPreferences,
-        field_set: FSet,
+        field_set_with_options: FSet,
     ) -> Result<Self, DateTimeFormatterLoadError>
     where
         crate::provider::Baked: AllFixedCalendarFormattingDataMarkers<C, FSet>,
@@ -231,7 +252,7 @@ where
             &crate::provider::Baked,
             &ExternalLoaderCompiledData,
             prefs,
-            field_set.get_field(),
+            field_set_with_options.get_field(),
         )
     }
 
@@ -247,7 +268,7 @@ where
     pub fn try_new_unstable<P>(
         provider: &P,
         prefs: DateTimeFormatterPreferences,
-        field_set: FSet,
+        field_set_with_options: FSet,
     ) -> Result<Self, DateTimeFormatterLoadError>
     where
         P: ?Sized
@@ -258,7 +279,7 @@ where
             provider,
             &ExternalLoaderUnstable(provider),
             prefs,
-            field_set.get_field(),
+            field_set_with_options.get_field(),
         )
     }
 }
@@ -273,26 +294,41 @@ where
         provider: &P,
         loader: &L,
         prefs: DateTimeFormatterPreferences,
-        field_set: CompositeFieldSet,
+        field_set_with_options: CompositeFieldSet,
     ) -> Result<Self, DateTimeFormatterLoadError>
     where
         P: ?Sized + AllFixedCalendarFormattingDataMarkers<C, FSet>,
         L: DecimalFormatterLoader,
     {
         let names = RawDateTimeNames::new_without_number_formatting();
-        Self::try_new_internal_with_names(provider, provider, loader, prefs, field_set, names)
-            .map_err(|e| e.0)
+        Self::try_new_internal_with_names(
+            provider,
+            provider,
+            loader,
+            prefs,
+            field_set_with_options,
+            names,
+            DateTimeNamesMetadata::new_empty(), // OK: this is a constructor
+        )
+        .map_err(|e| e.0)
     }
 
-    #[allow(clippy::result_large_err)] // returning ownership of an argument to the caller
+    #[expect(clippy::result_large_err)] // returning ownership of an argument to the caller
     pub(crate) fn try_new_internal_with_names<P0, P1, L>(
         provider_p: &P0,
         provider: &P1,
         loader: &L,
         prefs: DateTimeFormatterPreferences,
-        field_set: CompositeFieldSet,
+        field_set_with_options: CompositeFieldSet,
         mut names: RawDateTimeNames<FSet>,
-    ) -> Result<Self, (DateTimeFormatterLoadError, RawDateTimeNames<FSet>)>
+        mut names_metadata: DateTimeNamesMetadata,
+    ) -> Result<
+        Self,
+        (
+            DateTimeFormatterLoadError,
+            (RawDateTimeNames<FSet>, DateTimeNamesMetadata),
+        ),
+    >
     where
         P0: ?Sized + AllFixedCalendarPatternDataMarkers<C, FSet>,
         P1: ?Sized + AllFixedCalendarFormattingDataMarkers<C, FSet>,
@@ -303,11 +339,11 @@ where
             &<FSet::T as TimeMarkers>::TimeSkeletonPatternsV1::bind(provider_p),
             &FSet::GluePatternV1::bind(provider_p),
             prefs,
-            field_set,
+            field_set_with_options,
         );
         let selection = match selection {
             Ok(selection) => selection,
-            Err(e) => return Err((DateTimeFormatterLoadError::Data(e), names)),
+            Err(e) => return Err((DateTimeFormatterLoadError::Data(e), (names, names_metadata))),
         };
         let result = names.load_for_pattern(
             &<FSet::D as TypedDateDataMarkers<C>>::YearNamesV1::bind(provider),
@@ -328,10 +364,16 @@ where
             loader, // fixed decimal formatter
             prefs,
             selection.pattern_items_for_data_loading(),
+            &mut names_metadata,
         );
         match result {
             Ok(()) => (),
-            Err(e) => return Err((DateTimeFormatterLoadError::Names(e), names)),
+            Err(e) => {
+                return Err((
+                    DateTimeFormatterLoadError::Names(e),
+                    (names, names_metadata),
+                ))
+            }
         };
         Ok(Self {
             selection,
@@ -362,80 +404,6 @@ where
     }
 }
 
-impl<C: CldrCalendar, FSet: DateTimeNamesMarker> FixedCalendarDateTimeFormatter<C, FSet> {
-    /// Formats a datetime without enforcing either the field set or the calendar.
-    ///
-    /// This function is useful when the caller knows something about the field set that the
-    /// type system is unaware of. For example, if the formatter is represented with a
-    /// [dynamic field set](crate::fieldsets::enums), the caller may be able to provide a
-    /// narrower type for formatting.
-    ///
-    /// ❗ The caller must ensure that:
-    ///
-    /// 1. The calendar of the input matches the calendar of the formatter
-    /// 2. The fields of the input are a superset of the fields of the formatter
-    ///
-    /// Returns a [`FormattedDateTimeUnchecked`] to surface errors when they occur,
-    /// but not every invariant will result in an error. Use with caution!
-    ///
-    /// # Examples
-    ///
-    /// In the following example, we know that the formatter's field set is [`YMD`], but the
-    /// type system thinks we are a [`CompositeFieldSet`], which requires a [`ZonedDateTime`]
-    /// as input. However, since [`Date`] contains all the fields required by [`YMD`], we can
-    /// successfully pass it into [`format_unchecked`].
-    ///
-    /// ```
-    /// use icu::calendar::cal::Buddhist;
-    /// use icu::datetime::fieldsets::{T, YMD};
-    /// use icu::datetime::fieldsets::enums::CompositeFieldSet;
-    /// use icu::datetime::input::{Date, Time};
-    /// use icu::datetime::FixedCalendarDateTimeFormatter;
-    /// use icu::datetime::DateTimeWriteError;
-    /// use icu::datetime::DateTimeInputUnchecked;
-    /// use icu::locale::locale;
-    /// use writeable::assert_try_writeable_eq;
-    ///
-    /// let formatter = FixedCalendarDateTimeFormatter::<Buddhist, _>::try_new(
-    ///     locale!("th").into(),
-    ///     YMD::long(),
-    /// )
-    /// .unwrap()
-    /// .cast_into_fset::<CompositeFieldSet>();
-    ///
-    /// // Create a date and convert it to the correct calendar:
-    /// let date = Date::try_new_iso(2025, 3, 7).unwrap().to_calendar(Buddhist);
-    ///
-    /// // Extract the fields and use it with format_unchecked:
-    /// let mut input = DateTimeInputUnchecked::default();
-    /// input.set_date_fields(date);
-    /// let result = formatter.format_unchecked(input);
-    ///
-    /// assert_try_writeable_eq!(result, "7 มีนาคม 2568");
-    ///
-    /// // If we don't give all needed fields, we will get an error!
-    /// let mut input = DateTimeInputUnchecked::default();
-    /// let result = formatter.format_unchecked(input);
-    /// assert_try_writeable_eq!(
-    ///     result,
-    ///     "{d} {M} {G} {y}",
-    ///     Err(DateTimeWriteError::MissingInputField("day_of_month"))
-    /// );
-    /// ```
-    ///
-    /// [`Date`]: crate::input::Date
-    /// [`ZonedDateTime`]: crate::input::ZonedDateTime
-    /// [`YMD`]: crate::fieldsets::YMD
-    /// [`format_unchecked`]: Self::format_unchecked
-    pub fn format_unchecked(&self, datetime: DateTimeInputUnchecked) -> FormattedDateTimeUnchecked {
-        FormattedDateTimeUnchecked {
-            pattern: self.selection.select(&datetime),
-            input: datetime,
-            names: self.names.as_borrowed(),
-        }
-    }
-}
-
 size_test!(
     DateTimeFormatter<crate::fieldsets::YMD>,
     neo_year_month_day_formatter_size,
@@ -446,10 +414,32 @@ size_test!(
 /// a calendar selected at runtime.
 ///
 /// For more details, please read the [crate root docs][crate].
+///
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```
+/// use icu::datetime::fieldsets::YMD;
+/// use icu::datetime::input::Date;
+/// use icu::datetime::DateTimeFormatter;
+/// use icu::locale::locale;
+/// use writeable::assert_writeable_eq;
+///
+/// let formatter = DateTimeFormatter::try_new(
+///     locale!("en-u-ca-hebrew").into(),
+///     YMD::medium(),
+/// )
+/// .unwrap();
+///
+/// let date = Date::try_new_iso(2024, 5, 8).unwrap();
+///
+/// assert_writeable_eq!(formatter.format(&date), "30 Nisan 5784");
+/// ```
 #[doc = neo_year_month_day_formatter_size!()]
 #[derive(Debug, Clone)]
 pub struct DateTimeFormatter<FSet: DateTimeNamesMarker> {
-    selection: DateTimeZonePatternSelectionData,
+    pub(crate) selection: DateTimeZonePatternSelectionData,
     pub(crate) names: RawDateTimeNames<FSet>,
     pub(crate) calendar: UntaggedFormattableAnyCalendar,
 }
@@ -470,35 +460,11 @@ where
     /// ✨ *Enabled with the `compiled_data` Cargo feature.*
     ///
     /// [📚 Help choosing a constructor](icu_provider::constructors)
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use icu::datetime::fieldsets::YMD;
-    /// use icu::datetime::input::Date;
-    /// use icu::datetime::DateTimeFormatter;
-    /// use icu::locale::locale;
-    /// use writeable::assert_writeable_eq;
-    ///
-    /// let formatter = DateTimeFormatter::try_new(
-    ///     locale!("en-u-ca-hebrew").into(),
-    ///     YMD::medium(),
-    /// )
-    /// .unwrap();
-    ///
-    /// let date = Date::try_new_iso(2024, 5, 8).unwrap();
-    ///
-    /// assert_writeable_eq!(formatter.format(&date), "30 Nisan 5784");
-    /// ```
-    ///
-    /// [`AnyCalendarKind`]: icu_calendar::AnyCalendarKind
     #[inline(never)]
     #[cfg(feature = "compiled_data")]
     pub fn try_new(
         prefs: DateTimeFormatterPreferences,
-        field_set: FSet,
+        field_set_with_options: FSet,
     ) -> Result<Self, DateTimeFormatterLoadError>
     where
         crate::provider::Baked: AllAnyCalendarFormattingDataMarkers<FSet>,
@@ -507,7 +473,7 @@ where
             &crate::provider::Baked,
             &ExternalLoaderCompiledData,
             prefs,
-            field_set.get_field(),
+            field_set_with_options.get_field(),
         )
     }
 
@@ -523,7 +489,7 @@ where
     pub fn try_new_unstable<P>(
         provider: &P,
         prefs: DateTimeFormatterPreferences,
-        field_set: FSet,
+        field_set_with_options: FSet,
     ) -> Result<Self, DateTimeFormatterLoadError>
     where
         P: ?Sized + AllAnyCalendarFormattingDataMarkers<FSet> + AllAnyCalendarExternalDataMarkers,
@@ -532,7 +498,7 @@ where
             provider,
             &ExternalLoaderUnstable(provider),
             prefs,
-            field_set.get_field(),
+            field_set_with_options.get_field(),
         )
     }
 }
@@ -547,7 +513,7 @@ where
         provider: &P,
         loader: &L,
         prefs: DateTimeFormatterPreferences,
-        field_set: CompositeFieldSet,
+        field_set_with_options: CompositeFieldSet,
     ) -> Result<Self, DateTimeFormatterLoadError>
     where
         P: ?Sized + AllAnyCalendarFormattingDataMarkers<FSet>,
@@ -557,25 +523,39 @@ where
         let calendar = FormattableAnyCalendarLoader::load(loader, kind)?;
         let names = RawDateTimeNames::new_without_number_formatting();
         Self::try_new_internal_with_calendar_and_names(
-            provider, provider, loader, prefs, field_set, calendar, names,
+            provider,
+            provider,
+            loader,
+            prefs,
+            field_set_with_options,
+            calendar,
+            names,
+            DateTimeNamesMetadata::new_empty(), // OK: this is a constructor
         )
         .map_err(|e| e.0)
     }
 
-    #[allow(clippy::result_large_err)] // returning ownership of an argument to the caller
+    #[expect(clippy::result_large_err)] // returning ownership of an argument to the caller
+    #[expect(clippy::too_many_arguments)] // internal function with lots of generics
+    #[expect(clippy::type_complexity)] // return type has all the parts inside
     pub(crate) fn try_new_internal_with_calendar_and_names<P0, P1, L>(
         provider_p: &P0,
         provider: &P1,
         loader: &L,
         prefs: DateTimeFormatterPreferences,
-        field_set: CompositeFieldSet,
+        field_set_with_options: CompositeFieldSet,
         calendar: FormattableAnyCalendar,
         mut names: RawDateTimeNames<FSet>,
+        mut names_metadata: DateTimeNamesMetadata,
     ) -> Result<
         Self,
         (
             DateTimeFormatterLoadError,
-            (FormattableAnyCalendar, RawDateTimeNames<FSet>),
+            (
+                FormattableAnyCalendar,
+                RawDateTimeNames<FSet>,
+                DateTimeNamesMetadata,
+            ),
         ),
     >
     where
@@ -591,11 +571,16 @@ where
             &<FSet::T as TimeMarkers>::TimeSkeletonPatternsV1::bind(provider_p),
             &FSet::GluePatternV1::bind(provider_p),
             prefs,
-            field_set,
+            field_set_with_options,
         );
         let selection = match selection {
             Ok(selection) => selection,
-            Err(e) => return Err((DateTimeFormatterLoadError::Data(e), (calendar, names))),
+            Err(e) => {
+                return Err((
+                    DateTimeFormatterLoadError::Data(e),
+                    (calendar, names, names_metadata),
+                ))
+            }
         };
         let result = names.load_for_pattern(
             &FormattableAnyCalendarNamesLoader::<<FSet::D as DateDataMarkers>::Year, _>::new(
@@ -622,10 +607,16 @@ where
             loader, // fixed decimal formatter
             prefs,
             selection.pattern_items_for_data_loading(),
+            &mut names_metadata,
         );
         match result {
             Ok(()) => (),
-            Err(e) => return Err((DateTimeFormatterLoadError::Names(e), (calendar, names))),
+            Err(e) => {
+                return Err((
+                    DateTimeFormatterLoadError::Names(e),
+                    (calendar, names, names_metadata),
+                ))
+            }
         };
         Ok(Self {
             selection,
@@ -769,79 +760,6 @@ where
     }
 }
 
-impl<FSet: DateTimeNamesMarker> DateTimeFormatter<FSet> {
-    /// Formats a datetime without enforcing either the field set or the calendar.
-    ///
-    /// This function is useful when the caller knows something about the field set that the
-    /// type system is unaware of. For example, if the formatter is represented with a
-    /// [dynamic field set](crate::fieldsets::enums), the caller may be able to provide a
-    /// narrower type for formatting.
-    ///
-    /// ❗ The caller must ensure that:
-    ///
-    /// 1. The calendar of the input matches the calendar of the formatter
-    /// 2. The fields of the input are a superset of the fields of the formatter
-    ///
-    /// Returns a [`FormattedDateTimeUnchecked`] to surface errors when they occur,
-    /// but not every invariant will result in an error. Use with caution!
-    ///
-    /// # Examples
-    ///
-    /// In the following example, we know that the formatter's field set is [`YMD`], but the
-    /// type system thinks we are a [`CompositeFieldSet`], which requires a [`ZonedDateTime`]
-    /// as input. However, since [`Date`] contains all the fields required by [`YMD`], we can
-    /// successfully pass it into [`format_unchecked`].
-    ///
-    /// ```
-    /// use icu::datetime::fieldsets::{T, YMD};
-    /// use icu::datetime::fieldsets::enums::CompositeFieldSet;
-    /// use icu::datetime::input::{Date, Time};
-    /// use icu::datetime::DateTimeFormatter;
-    /// use icu::datetime::DateTimeWriteError;
-    /// use icu::datetime::DateTimeInputUnchecked;
-    /// use icu::locale::locale;
-    /// use writeable::assert_try_writeable_eq;
-    ///
-    /// let formatter = DateTimeFormatter::try_new(
-    ///     locale!("th-TH").into(),
-    ///     YMD::long(),
-    /// )
-    /// .unwrap()
-    /// .cast_into_fset::<CompositeFieldSet>();
-    ///
-    /// // Create a date and convert it to the correct calendar:
-    /// let date = Date::try_new_iso(2025, 3, 7).unwrap().to_calendar(formatter.calendar());
-    ///
-    /// // Extract the fields and use it with format_unchecked:
-    /// let mut input = DateTimeInputUnchecked::default();
-    /// input.set_date_fields(date);
-    /// let result = formatter.format_unchecked(input);
-    ///
-    /// assert_try_writeable_eq!(result, "7 มีนาคม 2568");
-    ///
-    /// // If we don't give all needed fields, we will get an error!
-    /// let mut input = DateTimeInputUnchecked::default();
-    /// let result = formatter.format_unchecked(input);
-    /// assert_try_writeable_eq!(
-    ///     result,
-    ///     "{d} {M} {G} {y}",
-    ///     Err(DateTimeWriteError::MissingInputField("day_of_month"))
-    /// );
-    /// ```
-    ///
-    /// [`Date`]: crate::input::Date
-    /// [`ZonedDateTime`]: crate::input::ZonedDateTime
-    /// [`YMD`]: crate::fieldsets::YMD
-    /// [`format_unchecked`]: Self::format_unchecked
-    pub fn format_unchecked(&self, datetime: DateTimeInputUnchecked) -> FormattedDateTimeUnchecked {
-        FormattedDateTimeUnchecked {
-            pattern: self.selection.select(&datetime),
-            input: datetime,
-            names: self.names.as_borrowed(),
-        }
-    }
-}
-
 impl<C: CldrCalendar, FSet: DateTimeMarkers> FixedCalendarDateTimeFormatter<C, FSet> {
     /// Make this [`FixedCalendarDateTimeFormatter`] adopt a calendar so it can format any date.
     ///
@@ -943,7 +861,7 @@ impl<C: CldrCalendar, FSet: DateTimeMarkers> FixedCalendarDateTimeFormatter<C, F
     /// // Create a simple YMDT formatter:
     /// let formatter = FixedCalendarDateTimeFormatter::try_new(
     ///     locale!("und").into(),
-    ///     YMD::long().with_time_hm().with_alignment(Alignment::Column)
+    ///     YMD::long().with_time_hm().with_alignment(Alignment::Column),
     /// )
     /// .unwrap();
     ///
@@ -957,10 +875,7 @@ impl<C: CldrCalendar, FSet: DateTimeMarkers> FixedCalendarDateTimeFormatter<C, F
     /// equivalent_builder.time_precision = Some(TimePrecision::Minute);
     /// equivalent_builder.alignment = Some(Alignment::Column);
     /// equivalent_builder.year_style = None;
-    /// assert_eq!(
-    ///     builder,
-    ///     equivalent_builder,
-    /// );
+    /// assert_eq!(builder, equivalent_builder,);
     ///
     /// // Check that it creates a formatter with equivalent behavior:
     /// let built_formatter = FixedCalendarDateTimeFormatter::try_new(
@@ -1100,7 +1015,8 @@ impl<FSet: DateTimeMarkers> DateTimeFormatter<FSet> {
     /// use writeable::assert_writeable_eq;
     ///
     /// let formatter =
-    ///     DateTimeFormatter::try_new(locale!("th-TH").into(), YMD::long()).unwrap();
+    ///     DateTimeFormatter::try_new(locale!("th-TH").into(), YMD::long())
+    ///         .unwrap();
     ///
     /// assert_writeable_eq!(
     ///     formatter.format(&Date::try_new_iso(2024, 12, 16).unwrap()),
@@ -1177,12 +1093,16 @@ impl<FSet: DateTimeMarkers> DateTimeFormatter<FSet> {
 ///
 /// ```
 /// use icu::datetime::fieldsets::T;
-/// use icu::datetime::NoCalendarFormatter;
 /// use icu::datetime::input::Time;
+/// use icu::datetime::NoCalendarFormatter;
 /// use icu::locale::locale;
 ///
-/// let formatter = NoCalendarFormatter::try_new(locale!("bn").into(), T::long()).unwrap();
-/// assert_eq!(formatter.format(&Time::start_of_day()).to_string(), "১২:০০:০০ AM");
+/// let formatter =
+///     NoCalendarFormatter::try_new(locale!("bn").into(), T::long()).unwrap();
+/// assert_eq!(
+///     formatter.format(&Time::start_of_day()).to_string(),
+///     "১২:০০:০০ AM"
+/// );
 /// ```
 ///
 /// A [`NoCalendarFormatter`] cannot be constructed with a fieldset that involves dates:
@@ -1256,47 +1176,6 @@ impl Writeable for FormattedDateTime<'_> {
 impl_display_with_writeable!(FormattedDateTime<'_>);
 
 impl FormattedDateTime<'_> {
-    /// Gets the pattern used in this formatted value.
-    ///
-    /// From the pattern, one can check the properties of the included components, such as
-    /// the hour cycle being used for formatting. See [`DateTimePattern`].
-    pub fn pattern(&self) -> DateTimePattern {
-        self.pattern.to_pattern()
-    }
-}
-
-/// An intermediate type during a datetime formatting operation with dynamic input.
-///
-/// Unlike [`FormattedDateTime`], converting this to a string could fail.
-///
-/// Not intended to be stored: convert to a string first.
-#[derive(Debug)]
-pub struct FormattedDateTimeUnchecked<'a> {
-    pattern: DateTimeZonePatternDataBorrowed<'a>,
-    input: DateTimeInputUnchecked,
-    names: RawDateTimeNamesBorrowed<'a>,
-}
-
-impl TryWriteable for FormattedDateTimeUnchecked<'_> {
-    type Error = DateTimeWriteError;
-    fn try_write_to_parts<S: writeable::PartsWrite + ?Sized>(
-        &self,
-        sink: &mut S,
-    ) -> Result<Result<(), Self::Error>, fmt::Error> {
-        try_write_pattern_items(
-            self.pattern.metadata(),
-            self.pattern.iter_items(),
-            &self.input,
-            &self.names,
-            self.names.decimal_formatter,
-            sink,
-        )
-    }
-
-    // TODO(#489): Implement writeable_length_hint
-}
-
-impl FormattedDateTimeUnchecked<'_> {
     /// Gets the pattern used in this formatted value.
     ///
     /// From the pattern, one can check the properties of the included components, such as

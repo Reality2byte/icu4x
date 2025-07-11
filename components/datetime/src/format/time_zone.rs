@@ -6,28 +6,31 @@
 
 use crate::pattern::TimeZoneDataPayloadsBorrowed;
 use crate::provider::time_zones::MetazoneId;
+use crate::unchecked::MissingInputFieldKind;
 use crate::{format::DateTimeInputUnchecked, provider::fields::FieldLength};
 use core::fmt;
 use fixed_decimal::Decimal;
-use icu_calendar::{Date, Iso};
 use icu_decimal::DecimalFormatter;
-use icu_time::provider::MinutesSinceEpoch;
+use icu_time::zone::ZoneNameTimestamp;
 use icu_time::{
     zone::{TimeZoneVariant, UtcOffset},
-    Time, TimeZone,
+    TimeZone,
 };
 use writeable::Writeable;
 
 impl crate::provider::time_zones::MetazonePeriod<'_> {
-    fn resolve(&self, time_zone_id: TimeZone, dt: (Date<Iso>, Time)) -> Option<MetazoneId> {
+    fn resolve(
+        &self,
+        time_zone_id: TimeZone,
+        zone_name_timestamp: ZoneNameTimestamp,
+    ) -> Option<MetazoneId> {
         use zerovec::ule::AsULE;
         let cursor = self.list.get0(&time_zone_id)?;
         let mut metazone_id = None;
-        let minutes_since_epoch_walltime = MinutesSinceEpoch::from(dt);
-        for (minutes, id) in cursor.iter1() {
-            if minutes_since_epoch_walltime >= MinutesSinceEpoch::from_unaligned(*minutes) {
-                metazone_id = id.get()
-            } else {
+        for (bytes, id) in cursor.iter1().rev() {
+            let candidate = ZoneNameTimestamp::from_unaligned(*bytes);
+            if zone_name_timestamp >= candidate {
+                metazone_id = id.get();
                 break;
             }
         }
@@ -55,7 +58,7 @@ pub(super) enum FormatTimeZoneError {
     NamesNotLoaded,
     DecimalFormatterNotLoaded,
     Fallback,
-    MissingInputField(&'static str),
+    MissingInputField(MissingInputFieldKind),
 }
 
 pub(super) trait FormatTimeZone {
@@ -116,11 +119,13 @@ impl FormatTimeZone for GenericNonLocationFormat {
         _fdf: Option<&DecimalFormatter>,
     ) -> Result<Result<(), FormatTimeZoneError>, fmt::Error> {
         let Some(time_zone_id) = input.zone_id else {
-            return Ok(Err(FormatTimeZoneError::MissingInputField("time_zone_id")));
-        };
-        let Some(local_time) = input.zone_local_time else {
             return Ok(Err(FormatTimeZoneError::MissingInputField(
-                "time_zone_local_time",
+                MissingInputFieldKind::TimeZoneId,
+            )));
+        };
+        let Some(local_time) = input.zone_name_timestamp else {
+            return Ok(Err(FormatTimeZoneError::MissingInputField(
+                MissingInputFieldKind::TimeZoneNameTimestamp,
             )));
         };
         let Some(generic_names) = (match self.0 {
@@ -174,16 +179,18 @@ impl FormatTimeZone for SpecificNonLocationFormat {
         _fdf: Option<&DecimalFormatter>,
     ) -> Result<Result<(), FormatTimeZoneError>, fmt::Error> {
         let Some(time_zone_id) = input.zone_id else {
-            return Ok(Err(FormatTimeZoneError::MissingInputField("time_zone_id")));
+            return Ok(Err(FormatTimeZoneError::MissingInputField(
+                MissingInputFieldKind::TimeZoneId,
+            )));
         };
         let Some(variant) = input.zone_variant else {
             return Ok(Err(FormatTimeZoneError::MissingInputField(
-                "time_zone_variant",
+                MissingInputFieldKind::TimeZoneVariant,
             )));
         };
-        let Some(local_time) = input.zone_local_time else {
+        let Some(local_time) = input.zone_name_timestamp else {
             return Ok(Err(FormatTimeZoneError::MissingInputField(
-                "time_zone_local_time",
+                MissingInputFieldKind::TimeZoneNameTimestamp,
             )));
         };
 
@@ -270,68 +277,63 @@ impl FormatTimeZone for LocalizedOffsetFormat {
             sink.write_str(&essentials.offset_unknown)?;
             return Ok(Ok(()));
         };
-        Ok(if offset.is_zero() && self.0 != FieldLength::Four {
-            sink.write_str(&essentials.offset_zero)?;
-            Ok(())
-        } else {
-            struct FormattedOffset<'a> {
-                offset: UtcOffset,
-                separator: &'a str,
-                formatter: &'a DecimalFormatter,
-                length: FieldLength,
-            }
+        struct FormattedOffset<'a> {
+            offset: UtcOffset,
+            separator: &'a str,
+            formatter: &'a DecimalFormatter,
+            length: FieldLength,
+        }
 
-            impl Writeable for FormattedOffset<'_> {
-                fn write_to_parts<S: writeable::PartsWrite + ?Sized>(
-                    &self,
-                    sink: &mut S,
-                ) -> fmt::Result {
-                    let decimal = {
-                        let mut decimal = Decimal::from(self.offset.hours_part())
-                            .with_sign_display(fixed_decimal::SignDisplay::Always);
-                        decimal.pad_start(if self.length == FieldLength::Four {
-                            2
-                        } else {
-                            0
-                        });
-                        decimal
-                    };
+        impl Writeable for FormattedOffset<'_> {
+            fn write_to_parts<S: writeable::PartsWrite + ?Sized>(
+                &self,
+                sink: &mut S,
+            ) -> fmt::Result {
+                let decimal = {
+                    let mut decimal = Decimal::from(self.offset.hours_part())
+                        .with_sign_display(fixed_decimal::SignDisplay::Always);
+                    decimal.pad_start(if self.length == FieldLength::Four {
+                        2
+                    } else {
+                        0
+                    });
+                    decimal
+                };
+                self.formatter.format(&decimal).write_to(sink)?;
+
+                if self.length == FieldLength::Four
+                    || self.offset.minutes_part() != 0
+                    || self.offset.seconds_part() != 0
+                {
+                    let mut decimal = Decimal::from(self.offset.minutes_part());
+                    decimal.absolute.pad_start(2);
+                    sink.write_str(self.separator)?;
                     self.formatter.format(&decimal).write_to(sink)?;
-
-                    if self.length == FieldLength::Four
-                        || self.offset.minutes_part() != 0
-                        || self.offset.seconds_part() != 0
-                    {
-                        let mut decimal = Decimal::from(self.offset.minutes_part());
-                        decimal.absolute.pad_start(2);
-                        sink.write_str(self.separator)?;
-                        self.formatter.format(&decimal).write_to(sink)?;
-                    }
-
-                    if self.offset.seconds_part() != 0 {
-                        sink.write_str(self.separator)?;
-
-                        let mut decimal = Decimal::from(self.offset.seconds_part());
-                        decimal.absolute.pad_start(2);
-                        self.formatter.format(&decimal).write_to(sink)?;
-                    }
-
-                    Ok(())
                 }
+
+                if self.offset.seconds_part() != 0 {
+                    sink.write_str(self.separator)?;
+
+                    let mut decimal = Decimal::from(self.offset.seconds_part());
+                    decimal.absolute.pad_start(2);
+                    self.formatter.format(&decimal).write_to(sink)?;
+                }
+
+                Ok(())
             }
+        }
 
-            essentials
-                .offset_pattern
-                .interpolate([FormattedOffset {
-                    offset,
-                    separator: &essentials.offset_separator,
-                    formatter,
-                    length: self.0,
-                }])
-                .write_to(sink)?;
+        essentials
+            .offset_pattern
+            .interpolate([FormattedOffset {
+                offset,
+                separator: &essentials.offset_separator,
+                formatter,
+                length: self.0,
+            }])
+            .write_to(sink)?;
 
-            Ok(())
-        })
+        Ok(Ok(()))
     }
 }
 
@@ -350,7 +352,9 @@ impl FormatTimeZone for GenericLocationFormat {
         _decimal_formatter: Option<&DecimalFormatter>,
     ) -> Result<Result<(), FormatTimeZoneError>, fmt::Error> {
         let Some(time_zone_id) = input.zone_id else {
-            return Ok(Err(FormatTimeZoneError::MissingInputField("time_zone_id")));
+            return Ok(Err(FormatTimeZoneError::MissingInputField(
+                MissingInputFieldKind::TimeZoneId,
+            )));
         };
 
         let Some(locations) = data_payloads.locations else {
@@ -393,11 +397,13 @@ impl FormatTimeZone for SpecificLocationFormat {
         _decimal_formatter: Option<&DecimalFormatter>,
     ) -> Result<Result<(), FormatTimeZoneError>, fmt::Error> {
         let Some(time_zone_id) = input.zone_id else {
-            return Ok(Err(FormatTimeZoneError::MissingInputField("time_zone_id")));
+            return Ok(Err(FormatTimeZoneError::MissingInputField(
+                MissingInputFieldKind::TimeZoneId,
+            )));
         };
         let Some(variant) = input.zone_variant else {
             return Ok(Err(FormatTimeZoneError::MissingInputField(
-                "time_zone_variant",
+                MissingInputFieldKind::TimeZoneVariant,
             )));
         };
         let Some(locations) = data_payloads.locations else {
@@ -443,7 +449,9 @@ impl FormatTimeZone for ExemplarCityFormat {
         _fdf: Option<&DecimalFormatter>,
     ) -> Result<Result<(), FormatTimeZoneError>, fmt::Error> {
         let Some(time_zone_id) = input.zone_id else {
-            return Ok(Err(FormatTimeZoneError::MissingInputField("time_zone_id")));
+            return Ok(Err(FormatTimeZoneError::MissingInputField(
+                MissingInputFieldKind::TimeZoneId,
+            )));
         };
         let Some(exemplars) = data_payloads.exemplars else {
             return Ok(Err(FormatTimeZoneError::NamesNotLoaded));
@@ -464,8 +472,8 @@ impl FormatTimeZone for ExemplarCityFormat {
             .or_else(|| exemplars_root.exemplars.get(&time_zone_id))
             .or_else(|| locations.locations.get(&time_zone_id))
             .or_else(|| locations_root.locations.get(&time_zone_id))
-            .or_else(|| exemplars.exemplars.get(&TimeZone::unknown()))
-            .or_else(|| exemplars_root.exemplars.get(&TimeZone::unknown()))
+            .or_else(|| exemplars.exemplars.get(&TimeZone::UNKNOWN))
+            .or_else(|| exemplars_root.exemplars.get(&TimeZone::UNKNOWN))
         else {
             return Ok(Err(FormatTimeZoneError::Fallback));
         };
@@ -490,11 +498,13 @@ impl FormatTimeZone for GenericPartialLocationFormat {
         _fdf: Option<&DecimalFormatter>,
     ) -> Result<Result<(), FormatTimeZoneError>, fmt::Error> {
         let Some(time_zone_id) = input.zone_id else {
-            return Ok(Err(FormatTimeZoneError::MissingInputField("time_zone_id")));
-        };
-        let Some(local_time) = input.zone_local_time else {
             return Ok(Err(FormatTimeZoneError::MissingInputField(
-                "time_zone_local_time",
+                MissingInputFieldKind::TimeZoneId,
+            )));
+        };
+        let Some(local_time) = input.zone_name_timestamp else {
+            return Ok(Err(FormatTimeZoneError::MissingInputField(
+                MissingInputFieldKind::TimeZoneNameTimestamp,
             )));
         };
 
@@ -726,7 +736,7 @@ impl FormatTimeZone for Bcp47IdFormat {
         _data_payloads: TimeZoneDataPayloadsBorrowed,
         _fdf: Option<&DecimalFormatter>,
     ) -> Result<Result<(), FormatTimeZoneError>, fmt::Error> {
-        let time_zone_id = input.zone_id.unwrap_or(TimeZone::unknown());
+        let time_zone_id = input.zone_id.unwrap_or(TimeZone::UNKNOWN);
 
         sink.write_str(time_zone_id.as_str())?;
 

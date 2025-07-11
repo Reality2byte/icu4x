@@ -39,13 +39,13 @@ pub mod ffi {
             )?)))
         }
 
-        /// Construct a default undefined [`Locale`] "und".
-        #[diplomat::rust_link(icu::locale::Locale::default, FnInStruct)]
+        /// Construct a unknown [`Locale`] "und".
+        #[diplomat::rust_link(icu::locale::Locale::UNKNOWN, AssociatedConstantInStruct)]
         #[diplomat::rust_link(icu::locale::DataLocale::default, FnInStruct, hidden)]
-        #[diplomat::rust_link(icu::locale::DataLocale::is_default, FnInStruct, hidden)]
+        #[diplomat::rust_link(icu::locale::DataLocale::is_unknown, FnInStruct, hidden)]
         #[diplomat::attr(all(supports = fallible_constructors, supports = named_constructors), named_constructor)]
-        pub fn und() -> Box<Locale> {
-            Box::new(Locale(icu_locale_core::Locale::default()))
+        pub fn unknown() -> Box<Locale> {
+            Box::new(Locale(icu_locale_core::Locale::UNKNOWN))
         }
 
         /// Clones the [`Locale`].
@@ -77,6 +77,15 @@ pub mod ffi {
                 })
         }
 
+        /// Set a Unicode extension.
+        #[diplomat::rust_link(icu::locale::Locale::extensions, StructField)]
+        pub fn set_unicode_extension(&mut self, k: &DiplomatStr, v: &DiplomatStr) -> Option<()> {
+            let k = icu_locale_core::extensions::unicode::Key::try_from_utf8(k).ok()?;
+            let v = icu_locale_core::extensions::unicode::Value::try_from_utf8(v).ok()?;
+            self.0.extensions.unicode.keywords.set(k, v);
+            Some(())
+        }
+
         /// Returns a string representation of [`Locale`] language.
         #[diplomat::rust_link(icu::locale::Locale::id, StructField)]
         #[diplomat::attr(auto, getter)]
@@ -90,7 +99,7 @@ pub mod ffi {
         #[diplomat::attr(auto, setter = "language")]
         pub fn set_language(&mut self, s: &DiplomatStr) -> Result<(), LocaleParseError> {
             self.0.id.language = if s.is_empty() {
-                icu_locale_core::subtags::Language::UND
+                icu_locale_core::subtags::Language::UNKNOWN
             } else {
                 icu_locale_core::subtags::Language::try_from_utf8(s)?
             };

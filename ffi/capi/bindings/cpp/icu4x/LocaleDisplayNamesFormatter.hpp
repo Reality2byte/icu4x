@@ -10,6 +10,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 #include "DataError.hpp"
 #include "DataProvider.hpp"
@@ -20,18 +21,17 @@
 namespace icu4x {
 namespace capi {
     extern "C" {
-    
+
     typedef struct icu4x_LocaleDisplayNamesFormatter_create_v1_mv1_result {union {icu4x::capi::LocaleDisplayNamesFormatter* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_LocaleDisplayNamesFormatter_create_v1_mv1_result;
     icu4x_LocaleDisplayNamesFormatter_create_v1_mv1_result icu4x_LocaleDisplayNamesFormatter_create_v1_mv1(const icu4x::capi::Locale* locale, icu4x::capi::DisplayNamesOptionsV1 options);
-    
+
     typedef struct icu4x_LocaleDisplayNamesFormatter_create_v1_with_provider_mv1_result {union {icu4x::capi::LocaleDisplayNamesFormatter* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_LocaleDisplayNamesFormatter_create_v1_with_provider_mv1_result;
     icu4x_LocaleDisplayNamesFormatter_create_v1_with_provider_mv1_result icu4x_LocaleDisplayNamesFormatter_create_v1_with_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::DisplayNamesOptionsV1 options);
-    
+
     void icu4x_LocaleDisplayNamesFormatter_of_mv1(const icu4x::capi::LocaleDisplayNamesFormatter* self, const icu4x::capi::Locale* locale, diplomat::capi::DiplomatWrite* write);
-    
-    
+
     void icu4x_LocaleDisplayNamesFormatter_destroy_mv1(LocaleDisplayNamesFormatter* self);
-    
+
     } // extern "C"
 } // namespace capi
 } // namespace
@@ -56,6 +56,13 @@ inline std::string icu4x::LocaleDisplayNamesFormatter::of(const icu4x::Locale& l
     locale.AsFFI(),
     &write);
   return output;
+}
+template<typename W>
+inline void icu4x::LocaleDisplayNamesFormatter::of_write(const icu4x::Locale& locale, W& writeable) const {
+  diplomat::capi::DiplomatWrite write = diplomat::WriteTrait<W>::Construct(writeable);
+  icu4x::capi::icu4x_LocaleDisplayNamesFormatter_of_mv1(this->AsFFI(),
+    locale.AsFFI(),
+    &write);
 }
 
 inline const icu4x::capi::LocaleDisplayNamesFormatter* icu4x::LocaleDisplayNamesFormatter::AsFFI() const {

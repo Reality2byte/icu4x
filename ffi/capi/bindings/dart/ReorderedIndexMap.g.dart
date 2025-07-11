@@ -7,7 +7,7 @@ part of 'lib.g.dart';
 ///
 /// `map[visualIndex] = sourceIndex`
 ///
-/// Produced by `reorder_visual()` on [`Bidi`].
+/// Produced by `reorder_visual()` on [Bidi].
 final class ReorderedIndexMap implements ffi.Finalizable {
   final ffi.Pointer<ffi.Opaque> _ffi;
 
@@ -25,6 +25,7 @@ final class ReorderedIndexMap implements ffi.Finalizable {
     }
   }
 
+  @_DiplomatFfiUse('icu4x_ReorderedIndexMap_destroy_mv1')
   static final _finalizer = ffi.NativeFinalizer(ffi.Native.addressOf(_icu4x_ReorderedIndexMap_destroy_mv1));
 
   /// Get this as a slice/array of indices
@@ -54,6 +55,7 @@ final class ReorderedIndexMap implements ffi.Finalizable {
     final result = _icu4x_ReorderedIndexMap_get_mv1(_ffi, index);
     return result;
   }
+
 }
 
 @_DiplomatFfiUse('icu4x_ReorderedIndexMap_destroy_mv1')

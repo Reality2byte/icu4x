@@ -5,43 +5,30 @@ import * as diplomatRuntime from "./diplomat-runtime.mjs";
 
 
 export class PluralCategories {
-    
     #zero;
-    
-    get zero()  {
+    get zero() {
         return this.#zero;
     }
-    
     #one;
-    
-    get one()  {
+    get one() {
         return this.#one;
     }
-    
     #two;
-    
-    get two()  {
+    get two() {
         return this.#two;
     }
-    
     #few;
-    
-    get few()  {
+    get few() {
         return this.#few;
     }
-    
     #many;
-    
-    get many()  {
+    get many() {
         return this.#many;
     }
-    
     #other;
-    
-    get other()  {
+    get other() {
         return this.#other;
     }
-    
     #internalConstructor(structObj, internalConstructor) {
         if (typeof structObj !== "object") {
             throw new Error("PluralCategories's constructor takes an object of PluralCategories's fields.");
@@ -91,12 +78,17 @@ export class PluralCategories {
 
     // Return this struct in FFI function friendly format.
     // Returns an array that can be expanded with spread syntax (...)
-    
     _intoFFI(
         functionCleanupArena,
         appendArrayMap
     ) {
-        return [this.#zero, this.#one, this.#two, this.#few, this.#many, this.#other]
+        let buffer = diplomatRuntime.DiplomatBuf.struct(wasm, 6, 1);
+
+        this._writeToArrayBuffer(wasm.memory.buffer, buffer.ptr, functionCleanupArena, appendArrayMap);
+
+        functionCleanupArena.alloc(buffer);
+
+        return buffer.ptr;
     }
 
     static _fromSuppliedValue(internalConstructor, obj) {
@@ -150,6 +142,7 @@ export class PluralCategories {
 
         return new PluralCategories(structObj, internalConstructor);
     }
+
 
     constructor(structObj, internalConstructor) {
         return this.#internalConstructor(...arguments)
