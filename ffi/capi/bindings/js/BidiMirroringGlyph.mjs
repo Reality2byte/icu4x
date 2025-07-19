@@ -4,43 +4,33 @@ import wasm from "./diplomat-wasm.mjs";
 import * as diplomatRuntime from "./diplomat-runtime.mjs";
 
 
-/** 
- * See the [Rust documentation for `BidiMirroringGlyph`](https://docs.rs/icu/latest/icu/properties/props/struct.BidiMirroringGlyph.html) for more information.
+
+/**
+ * See the [Rust documentation for `BidiMirroringGlyph`](https://docs.rs/icu/2.0.0/icu/properties/props/struct.BidiMirroringGlyph.html) for more information.
  */
-
-
 export class BidiMirroringGlyph {
-    
     #mirroringGlyph;
-    
-    get mirroringGlyph()  {
+    get mirroringGlyph() {
         return this.#mirroringGlyph;
-    } 
-    set mirroringGlyph(value) {
+    }
+    set mirroringGlyph(value){
         this.#mirroringGlyph = value;
     }
-    
     #mirrored;
-    
-    get mirrored()  {
+    get mirrored() {
         return this.#mirrored;
-    } 
-    set mirrored(value) {
+    }
+    set mirrored(value){
         this.#mirrored = value;
     }
-    
     #pairedBracketType;
-    
-    get pairedBracketType()  {
+    get pairedBracketType() {
         return this.#pairedBracketType;
-    } 
-    set pairedBracketType(value) {
+    }
+    set pairedBracketType(value){
         this.#pairedBracketType = value;
     }
-    
-    /** Create `BidiMirroringGlyph` from an object that contains all of `BidiMirroringGlyph`s fields.
-    * Optional fields do not need to be included in the provided object.
-    */
+    /** @internal */
     static fromFields(structObj) {
         return new BidiMirroringGlyph(structObj);
     }
@@ -73,12 +63,17 @@ export class BidiMirroringGlyph {
 
     // Return this struct in FFI function friendly format.
     // Returns an array that can be expanded with spread syntax (...)
-    
     _intoFFI(
         functionCleanupArena,
         appendArrayMap
     ) {
-        return [...diplomatRuntime.optionToArgsForCalling(this.#mirroringGlyph, 4, 4, (arrayBuffer, offset, jsValue) => [diplomatRuntime.writeToArrayBuffer(arrayBuffer, offset + 0, jsValue, Uint32Array)]), this.#mirrored, /* [3 x i8] padding */ 0, 0, 0 /* end padding */, this.#pairedBracketType.ffiValue]
+        let buffer = diplomatRuntime.DiplomatBuf.struct(wasm, 16, 4);
+
+        this._writeToArrayBuffer(wasm.memory.buffer, buffer.ptr, functionCleanupArena, appendArrayMap);
+
+        functionCleanupArena.alloc(buffer);
+
+        return buffer.ptr;
     }
 
     static _fromSuppliedValue(internalConstructor, obj) {
@@ -124,18 +119,20 @@ export class BidiMirroringGlyph {
         return new BidiMirroringGlyph(structObj);
     }
 
-    /** 
-     * See the [Rust documentation for `for_char`](https://docs.rs/icu/latest/icu/properties/props/trait.EnumeratedProperty.html#tymethod.for_char) for more information.
+
+    /**
+     * See the [Rust documentation for `for_char`](https://docs.rs/icu/2.0.0/icu/properties/props/trait.EnumeratedProperty.html#tymethod.for_char) for more information.
      */
     static forChar(ch) {
         const diplomatReceive = new diplomatRuntime.DiplomatReceiveBuf(wasm, 16, 4, false);
-        
+
+
         const result = wasm.icu4x_BidiMirroringGlyph_for_char_mv1(diplomatReceive.buffer, ch);
-    
+
         try {
             return BidiMirroringGlyph._fromFFI(diplomatRuntime.internalConstructor, diplomatReceive.buffer);
         }
-        
+
         finally {
             diplomatReceive.free();
         }

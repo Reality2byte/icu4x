@@ -3,7 +3,7 @@
 
 part of 'lib.g.dart';
 
-/// See the [Rust documentation for `PluralOperands`](https://docs.rs/icu/latest/icu/plurals/struct.PluralOperands.html) for more information.
+/// See the [Rust documentation for `PluralOperands`](https://docs.rs/icu/2.0.0/icu/plurals/struct.PluralOperands.html) for more information.
 final class PluralOperands implements ffi.Finalizable {
   final ffi.Pointer<ffi.Opaque> _ffi;
 
@@ -21,11 +21,12 @@ final class PluralOperands implements ffi.Finalizable {
     }
   }
 
+  @_DiplomatFfiUse('icu4x_PluralOperands_destroy_mv1')
   static final _finalizer = ffi.NativeFinalizer(ffi.Native.addressOf(_icu4x_PluralOperands_destroy_mv1));
 
   /// Construct for a given string representing a number
   ///
-  /// See the [Rust documentation for `from_str`](https://docs.rs/icu/latest/icu/plurals/struct.PluralOperands.html#method.from_str) for more information.
+  /// See the [Rust documentation for `from_str`](https://docs.rs/icu/2.0.0/icu/plurals/struct.PluralOperands.html#method.from_str) for more information.
   ///
   /// Throws [DecimalParseError] on failure.
   factory PluralOperands.fromString(String s) {
@@ -50,6 +51,7 @@ final class PluralOperands implements ffi.Finalizable {
     final result = _icu4x_PluralOperands_from_fixed_decimal_mv1(x._ffi);
     return PluralOperands._fromFfi(result, []);
   }
+
 }
 
 @_DiplomatFfiUse('icu4x_PluralOperands_destroy_mv1')

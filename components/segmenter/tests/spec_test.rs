@@ -154,7 +154,7 @@ fn line_break_test(file: &'static str) {
                     c
                 )
             }
-            println!("Test case #{}", i);
+            println!("Test case #{i}");
             panic!()
         }
 
@@ -218,7 +218,7 @@ fn word_break_test(file: &'static str) {
             let wb_name = PropertyNamesLong::<WordBreak>::new();
             let mut iter = segmenter.segment_str(&s);
             // TODO(egg): It would be really nice to have Name here.
-            println!("  | A | E | Code pt. |   Word_Break   | State | Literal");
+            println!("  | A | E | Code pt. |     Word_Break     | State | Literal");
             for (i, c) in s.char_indices() {
                 let expected_break = test.break_result_utf8.contains(&i);
                 let actual_break = result.contains(&i);
@@ -226,7 +226,7 @@ fn word_break_test(file: &'static str) {
                     iter.next();
                 }
                 println!(
-                    "{}| {} | {} | {:>8} | {:>14} | {} | {}",
+                    "{}| {} | {} | {:>8} | {:>18} | {} | {}",
                     if actual_break != expected_break {
                         "😭"
                     } else {
@@ -244,7 +244,7 @@ fn word_break_test(file: &'static str) {
                     c
                 )
             }
-            println!("Test case #{}", i);
+            println!("Test case #{i}");
             panic!()
         }
 
@@ -277,6 +277,11 @@ fn run_word_break_test() {
 #[test]
 fn run_word_break_extra_test() {
     word_break_test(include_str!("testdata/WordBreakExtraTest.txt"));
+}
+
+#[test]
+fn run_word_break_random_test() {
+    word_break_test(include_str!("testdata/WordBreakRandomTest.txt"));
 }
 
 fn grapheme_break_test(file: &'static str) {
@@ -318,7 +323,7 @@ fn grapheme_break_test(file: &'static str) {
                     c
                 )
             }
-            println!("Test case #{}", i);
+            println!("Test case #{i}");
             panic!()
         }
 
@@ -397,7 +402,7 @@ fn sentence_break_test(file: &'static str) {
                     c
                 )
             }
-            println!("Test case #{}", i);
+            println!("Test case #{i}");
             panic!()
         }
 

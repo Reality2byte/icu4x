@@ -6,12 +6,12 @@ use super::names::RawDateTimeNamesBorrowed;
 use super::pattern::DateTimePatternBorrowed;
 use crate::format::datetime::try_write_pattern_items;
 use crate::format::DateTimeInputUnchecked;
+use crate::pattern::FormattedDateTimePatternError;
 use crate::scaffold::*;
 use crate::scaffold::{
     AllInputMarkers, DateInputMarkers, DateTimeMarkers, InFixedCalendar, TimeMarkers,
     TypedDateDataMarkers, ZoneMarkers,
 };
-use crate::DateTimeWriteError;
 use core::fmt;
 use core::marker::PhantomData;
 use writeable::TryWriteable;
@@ -150,7 +150,10 @@ where
     ///     "The time is: 12:00 noon"
     /// );
     /// assert_eq!(
-    ///     formatter.format(&time_midnight).try_write_to_string().unwrap(),
+    ///     formatter
+    ///         .format(&time_midnight)
+    ///         .try_write_to_string()
+    ///         .unwrap(),
     ///     "The time is: 12:00 midnight"
     /// );
     /// ```
@@ -167,14 +170,14 @@ where
     /// use icu::time::zone::{IanaParser, VariantOffsetsCalculator};
     /// use writeable::TryWriteable;
     ///
-    /// let mut london_winter = ZonedDateTime::try_from_str(
+    /// let mut london_winter = ZonedDateTime::try_full_from_str(
     ///     "2024-01-01T00:00:00+00:00[Europe/London]",
     ///     Gregorian,
     ///     IanaParser::new(),
     ///     VariantOffsetsCalculator::new(),
     /// )
     /// .unwrap();
-    /// let mut london_summer = ZonedDateTime::try_from_str(
+    /// let mut london_summer = ZonedDateTime::try_full_from_str(
     ///     "2024-07-01T00:00:00+01:00[Europe/London]",
     ///     Gregorian,
     ///     IanaParser::new(),
@@ -198,11 +201,17 @@ where
     /// let formatter = names.with_pattern_unchecked(&pattern);
     ///
     /// assert_eq!(
-    ///     formatter.format(&london_winter).try_write_to_string().unwrap(),
+    ///     formatter
+    ///         .format(&london_winter)
+    ///         .try_write_to_string()
+    ///         .unwrap(),
     ///     "Your time zone is: GMT",
     /// );
     /// assert_eq!(
-    ///     formatter.format(&london_summer).try_write_to_string().unwrap(),
+    ///     formatter
+    ///         .format(&london_summer)
+    ///         .try_write_to_string()
+    ///         .unwrap(),
     ///     "Your time zone is: BST",
     /// );
     /// ```
@@ -229,7 +238,7 @@ pub struct FormattedDateTimePattern<'a> {
 }
 
 impl TryWriteable for FormattedDateTimePattern<'_> {
-    type Error = DateTimeWriteError;
+    type Error = FormattedDateTimePatternError;
     fn try_write_to_parts<S: writeable::PartsWrite + ?Sized>(
         &self,
         sink: &mut S,

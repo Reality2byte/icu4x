@@ -19,7 +19,7 @@ pub(crate) const JAPANEXT_FILE: &str =
 
 /// calendarData.json
 impl SourceDataProvider {
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     pub(crate) fn all_eras(
         &self,
     ) -> Result<&BTreeMap<DatagenCalendar, Vec<(usize, EraData)>>, DataError> {
@@ -163,11 +163,11 @@ fn process_era_dates_map(
                     "gregory-inverse" => Some("bce"),
                     "gregory" => Some("ce"),
                     "hebrew" => Some("am"),
-                    "indian" => Some("saka"),
+                    "indian" => Some("shaka"),
                     islamic if islamic.starts_with("islamic") => Some("ah"),
                     "persian" => Some("ap"),
-                    "roc-inverse" => Some("minguo-qian"),
-                    "roc" => Some("minguo"),
+                    "roc-inverse" => Some("broc"),
+                    "roc" => Some("roc"),
                     "chinese" | "dangi" => None,
                     "meiji" | "reiwa" | "taisho" | "showa" | "heisei" => Some(code),
                     c => unreachable!("{c:?}"),
@@ -562,7 +562,6 @@ fn test_calendar_eras() {
                 .try_into()
                 .expect(&calendar),
         };
-        println!("{calendar:?}");
 
         let cal = AnyCalendar::try_new_unstable(&provider, kind).unwrap();
         let cal = icu::calendar::Ref(&cal);
@@ -603,6 +602,10 @@ fn test_calendar_eras() {
             //         Ok(in_era)
             //     );
             // }
+
+            if era.start.is_some() && calendar != "japanese" {
+                assert_eq!(in_era.day_of_year().0, 1, "{calendar:?}");
+            }
 
             match in_era.year() {
                 icu::calendar::types::YearInfo::Era(era_year) => {

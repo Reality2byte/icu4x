@@ -165,6 +165,13 @@ impl FormatterKind {
             (false, _) => "Struct",
         }
     }
+    pub fn rustlink_doctype_fn(self) -> &'static str {
+        match (self.is_fixed_calendar, self.is_gregorian) {
+            (true, true) => "FnInStruct",
+            (true, false) => "FnInTypedef",
+            (false, _) => "FnInStruct",
+        }
+    }
 }
 
 #[derive(Template)]
@@ -253,7 +260,7 @@ impl DateTimeFormatterVariant {
         };
         !date_fields.is_calendar_period()
     }
-    pub fn is_default_constructor(&self) -> bool {
+    pub fn is_demo_constructor(&self) -> bool {
         use DateTimeFormatterVariantInner as Inner;
         matches!(
             self.inner,
@@ -318,8 +325,8 @@ impl ZonedFormatterVariant {
             _ => unreachable!("unknown variant"),
         }
     }
-    pub fn is_default_constructor(&self) -> bool {
-        matches!(self.zone_style, ZoneStyle::GenericShort)
+    pub fn is_demo_constructor(&self) -> bool {
+        matches!(self.zone_style, ZoneStyle::SpecificLong)
     }
 }
 
@@ -445,7 +452,7 @@ pub fn main() {
         path_buf.push("date_formatter.rs");
         let mut file = File::create(&path_buf).unwrap();
         use std::io::Write;
-        writeln!(&mut file, "{}", date_formatter_template).unwrap();
+        writeln!(&mut file, "{date_formatter_template}").unwrap();
     }
 
     {
@@ -453,7 +460,7 @@ pub fn main() {
         path_buf.push("time_formatter.rs");
         let mut file = File::create(&path_buf).unwrap();
         use std::io::Write;
-        writeln!(&mut file, "{}", time_formatter_template).unwrap();
+        writeln!(&mut file, "{time_formatter_template}").unwrap();
     }
 
     {
@@ -461,7 +468,7 @@ pub fn main() {
         path_buf.push("date_time_formatter.rs");
         let mut file = File::create(&path_buf).unwrap();
         use std::io::Write;
-        writeln!(&mut file, "{}", datetime_formatter_template).unwrap();
+        writeln!(&mut file, "{datetime_formatter_template}").unwrap();
     }
 
     {
@@ -469,7 +476,7 @@ pub fn main() {
         path_buf.push("timezone_formatter.rs");
         let mut file = File::create(&path_buf).unwrap();
         use std::io::Write;
-        writeln!(&mut file, "{}", zone_formatter_template).unwrap();
+        writeln!(&mut file, "{zone_formatter_template}").unwrap();
     }
 
     {
@@ -477,7 +484,7 @@ pub fn main() {
         path_buf.push("zoned_date_formatter.rs");
         let mut file = File::create(&path_buf).unwrap();
         use std::io::Write;
-        writeln!(&mut file, "{}", zoned_date_formatter_template).unwrap();
+        writeln!(&mut file, "{zoned_date_formatter_template}").unwrap();
     }
 
     {
@@ -485,7 +492,7 @@ pub fn main() {
         path_buf.push("zoned_time_formatter.rs");
         let mut file = File::create(&path_buf).unwrap();
         use std::io::Write;
-        writeln!(&mut file, "{}", zoned_time_formatter_template).unwrap();
+        writeln!(&mut file, "{zoned_time_formatter_template}").unwrap();
     }
 
     {
@@ -493,6 +500,6 @@ pub fn main() {
         path_buf.push("zoned_date_time_formatter.rs");
         let mut file = File::create(&path_buf).unwrap();
         use std::io::Write;
-        writeln!(&mut file, "{}", zoned_datetime_formatter_template).unwrap();
+        writeln!(&mut file, "{zoned_datetime_formatter_template}").unwrap();
     }
 }

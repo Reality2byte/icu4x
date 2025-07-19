@@ -18,7 +18,7 @@ include!("long_compact_decimal_format_data_v1.rs.data");
 include!("narrow_week_relative_v1.rs.data");
 include!("narrow_second_relative_v1.rs.data");
 include!("long_week_relative_v1.rs.data");
-include!("units_trie_v1.rs.data");
+include!("unit_ids_v1.rs.data");
 include!("short_minute_relative_v1.rs.data");
 include!("units_essentials_v1.rs.data");
 include!("language_display_names_v1.rs.data");
@@ -68,6 +68,13 @@ macro_rules! __make_provider {
 }
 #[doc(inline)]
 pub use __make_provider as make_provider;
+/// This macro requires the following crates:
+/// * `alloc`
+/// * `icu`
+/// * `icu_pattern`
+/// * `icu_provider`
+/// * `icu_provider/baked`
+/// * `zerovec`
 #[allow(unused_macros)]
 macro_rules! impl_data_provider {
     ($ provider : ty) => {
@@ -91,7 +98,7 @@ macro_rules! impl_data_provider {
         impl_narrow_week_relative_v1!($provider);
         impl_narrow_second_relative_v1!($provider);
         impl_long_week_relative_v1!($provider);
-        impl_units_trie_v1!($provider);
+        impl_unit_ids_v1!($provider);
         impl_short_minute_relative_v1!($provider);
         impl_units_essentials_v1!($provider);
         impl_language_display_names_v1!($provider);

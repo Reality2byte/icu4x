@@ -81,6 +81,7 @@ lazy_static::lazy_static! {
         // We might expose these if someone asks for it
         "DryDataProvider",
         "DynamicDryDataProvider",
+        "ExportableProvider",
 
         // internal trait, all methods replicated on Date
         "Calendar",
@@ -159,14 +160,16 @@ lazy_static::lazy_static! {
         "icu::datetime::fieldsets::enums",
         "icu::datetime::DateTimeFormatter::to_field_set_builder",
         "icu::datetime::FixedCalendarDateTimeFormatter::to_field_set_builder",
+        "icu::datetime::NoCalendarFormatter::to_field_set_builder",
         "icu::datetime::fieldsets::Combo::into_enums",
 
         // Not planned for 2.0: Unchecked formatting. FFI always uses the concrete Date, Time,
         // and TimeZoneInfo types. A composite formatter might need a format_unchecked-type
         // of function.
-        "icu::datetime::DateTimeInputUnchecked",
+        "icu::datetime::unchecked",
         "icu::datetime::FixedCalendarDateTimeFormatter::format_unchecked",
         "icu::datetime::DateTimeFormatter::format_unchecked",
+        "icu::datetime::NoCalendarFormatter::format_unchecked",
         "icu::datetime::FormattedDateTimeUnchecked",
 
         // Not planned for 2.0: Would need to introduce diplomat writeable with parts
@@ -184,6 +187,7 @@ lazy_static::lazy_static! {
         "icu::calendar::CalendarPreferences",
         "icu::calendar::any_calendar::CalendarPreferences",
         "icu::calendar::week::WeekPreferences",
+        "icu::collator::CollatorPreferences",
         "icu::datetime::DateTimeFormatterPreferences",
         "icu::decimal::DecimalFormatterPreferences",
         "icu::list::ListFormatterPreferences",
@@ -250,6 +254,7 @@ lazy_static::lazy_static! {
         // Not planned for 2.0
         // We will revisit these APIs when Duration Formatter needs them. We may need to rename things
         "fixed_decimal::Signed",
+        "fixed_decimal::Decimal::new",
         "fixed_decimal::UnsignedDecimal",
         "fixed_decimal::UnsignedRoundingMode",
 
@@ -263,6 +268,7 @@ lazy_static::lazy_static! {
         // DateTimeFormatter conversion functions that involve moving opaques
         "icu::datetime::DateTimeFormatter::try_into_typed_formatter",
         "icu::datetime::FixedCalendarDateTimeFormatter::into_formatter",
+        "icu::datetime::NoCalendarFormatter::into_formatter",
 
         // Not planned for 2.0
         // Serde-specific
@@ -370,6 +376,7 @@ lazy_static::lazy_static! {
         "icu::datetime::CldrCalendar",
         "icu::datetime::DateTimeFormatter::cast_into_fset",
         "icu::datetime::FixedCalendarDateTimeFormatter::cast_into_fset",
+        "icu::datetime::NoCalendarFormatter::cast_into_fset",
         // TODO-2.0: needs investigation
         "icu::calendar::Date::into_ref_counted",
         "icu::calendar::Date::into_atomic_ref_counted",
@@ -423,6 +430,9 @@ lazy_static::lazy_static! {
         "icu_provider_adapters::fallback::LocaleFallbackProvider::inner",
         "icu_provider_adapters::fallback::LocaleFallbackProvider::into_inner",
         "icu_provider_adapters::fallback::LocaleFallbackProvider::inner_mut",
+        "icu_provider_adapters::fork::ForkByMarkerProvider::inner",
+        "icu_provider_adapters::fork::ForkByMarkerProvider::inner_mut",
+        "icu_provider_adapters::fork::ForkByMarkerProvider::into_inner",
 
         // The polymorphic ICU4XDataProvider type makes the MultiFork providers less relevant.
         "icu_provider_adapters::fork::MultiForkByErrorProvider",

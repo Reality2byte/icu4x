@@ -2,29 +2,27 @@
 import type { pointer, codepoint } from "./diplomat-runtime.d.ts";
 
 
-/** 
- * Additional information: [1](https://docs.rs/icu/latest/icu/datetime/enum.DateTimeWriteError.html)
+
+/**
+ * An error when formatting a datetime.
+ *
+ * Currently never returned by any API.
+ *
+ * Additional information: [1](https://docs.rs/icu/2.0.0/icu/datetime/unchecked/enum.FormattedDateTimeUncheckedError.html)
  */
-
-
 export class DateTimeWriteError {
-    
 
-    static fromValue(value : DateTimeWriteError | string) : DateTimeWriteError; 
+    /** @internal */
+    static fromValue(value: DateTimeWriteError | string): DateTimeWriteError;
 
-    get value() : string;
+    get value(): string;
 
-    get ffiValue() : number;
+    /** @internal */
+    get ffiValue(): number;
 
     static Unknown : DateTimeWriteError;
-    static InvalidMonthCode : DateTimeWriteError;
-    static InvalidEra : DateTimeWriteError;
-    static InvalidCyclicYear : DateTimeWriteError;
-    static DecimalFormatterNotLoaded : DateTimeWriteError;
-    static NamesNotLoaded : DateTimeWriteError;
-    static MissingInputField : DateTimeWriteError;
-    static UnsupportedLength : DateTimeWriteError;
-    static UnsupportedField : DateTimeWriteError;
+    static MissingTimeZoneVariant : DateTimeWriteError;
+
 
     constructor(value: DateTimeWriteError | string );
 }

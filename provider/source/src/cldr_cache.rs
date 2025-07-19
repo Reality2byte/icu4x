@@ -26,7 +26,7 @@ pub(crate) struct CldrCache {
     pub(crate) serde_cache: SerdeCache,
     dir_suffix: OnceLock<Result<&'static str, DataError>>,
     extended_locale_expander: OnceLock<Result<LocaleExpander, DataError>>,
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     pub(crate) calendar_eras:
         OnceLock<Result<BTreeMap<DatagenCalendar, Vec<(usize, EraData)>>, DataError>>,
     #[cfg(feature = "experimental")]
@@ -188,7 +188,7 @@ impl CldrCache {
     /// CLDR sometimes stores locales with default scripts.
     /// Add in the likely script here to make that data reachable.
     fn add_script_extended(&self, locale: &DataLocale) -> Result<Option<DataLocale>, DataError> {
-        if locale.language.is_default() || locale.script.is_some() {
+        if locale.language.is_unknown() || locale.script.is_some() {
             return Ok(None);
         }
         let mut new_langid =
@@ -208,7 +208,7 @@ impl CldrCache {
     /// if the script is the default for the language.
     /// Perform that normalization mapping here.
     fn remove_script_extended(&self, locale: &DataLocale) -> Result<Option<DataLocale>, DataError> {
-        if locale.language.is_default() || locale.script.is_none() {
+        if locale.language.is_unknown() || locale.script.is_none() {
             return Ok(None);
         }
         let mut langid =

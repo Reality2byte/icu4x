@@ -5,7 +5,10 @@
 //! Enumerations over [field sets](crate::fieldsets).
 //!
 //! These enumerations can be used when the field set is not known at compile time. However,
-//! they may contribute negatively to the binary size of the formatters.
+//! using dynamic field sets in constructors will link data for all possible values
+//! of the field set, which can significantly increase binary size. Prefer using
+//! [`cast_into_fset`](crate::DateTimeFormatter::cast_into_fset) on formatters constructed
+//! using static field sets instead.
 //!
 //! The most general type is [`CompositeFieldSet`], which supports all field
 //! sets in a single enumeration. [`CompositeDateTimeFieldSet`] is a good
@@ -36,16 +39,20 @@
 //! use icu::locale::locale;
 //! use writeable::Writeable;
 //!
-//! fn get_field_set(should_display_time: bool) -> CompositeDateTimeFieldSet {
+//! fn composite_field_set(
+//!     should_display_time: bool,
+//! ) -> CompositeDateTimeFieldSet {
 //!     if should_display_time {
-//!         let field_set = fieldsets::MD::medium().with_time_hm();
+//!         let field_set_with_options = fieldsets::MD::medium().with_time_hm();
 //!         CompositeDateTimeFieldSet::DateTime(
-//!             fieldsets::enums::DateAndTimeFieldSet::MDT(field_set),
+//!             fieldsets::enums::DateAndTimeFieldSet::MDT(
+//!                 field_set_with_options,
+//!             ),
 //!         )
 //!     } else {
-//!         let field_set = fieldsets::MD::medium();
+//!         let field_set_with_options = fieldsets::MD::medium();
 //!         CompositeDateTimeFieldSet::Date(fieldsets::enums::DateFieldSet::MD(
-//!             field_set,
+//!             field_set_with_options,
 //!         ))
 //!     }
 //! }
@@ -55,8 +62,16 @@
 //!     time: Time::try_new(16, 0, 0, 0).unwrap(),
 //! };
 //!
-//! let with_time = DateTimeFormatter::try_new(locale!("en-US").into(), get_field_set(true)).unwrap();
-//! let without_time = DateTimeFormatter::try_new(locale!("en-US").into(), get_field_set(false)).unwrap();
+//! let with_time = DateTimeFormatter::try_new(
+//!     locale!("en-US").into(),
+//!     composite_field_set(true),
+//! )
+//! .unwrap();
+//! let without_time = DateTimeFormatter::try_new(
+//!     locale!("en-US").into(),
+//!     composite_field_set(false),
+//! )
+//! .unwrap();
 //!
 //! assert_eq!(with_time.format(&datetime).to_string(), "Jan 15, 4:00 PM");
 //! assert_eq!(without_time.format(&datetime).to_string(), "Jan 15");
@@ -112,7 +127,7 @@ pub enum CalendarPeriodFieldSet {
     /// A year, as in
     /// “2000”.
     Y(fieldsets::Y),
-    // TODO: Add support for week-of-year
+    // TODO(#5643): Add support for week-of-year
     // /// The year and week of the year, as in
     // /// “52nd week of 1999”.
     // YW(fieldsets::YW),

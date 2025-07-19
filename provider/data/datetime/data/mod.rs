@@ -42,7 +42,6 @@ include!("timezone_names_generic_long_v1.rs.data");
 include!("datetime_names_month_indian_v1.rs.data");
 include!("datetime_names_month_ethiopian_v1.rs.data");
 include!("datetime_patterns_date_coptic_v1.rs.data");
-include!("timezone_metazone_periods_v1.rs.data");
 include!("datetime_patterns_date_buddhist_v1.rs.data");
 include!("timezone_names_standard_long_v1.rs.data");
 include!("datetime_names_month_japanese_v1.rs.data");
@@ -78,6 +77,13 @@ macro_rules! __make_provider {
 }
 #[doc(inline)]
 pub use __make_provider as make_provider;
+/// This macro requires the following crates:
+/// * `alloc`
+/// * `icu`
+/// * `icu_pattern`
+/// * `icu_provider`
+/// * `icu_provider/baked`
+/// * `zerovec`
 #[allow(unused_macros)]
 macro_rules! impl_data_provider {
     ($ provider : ty) => {
@@ -125,7 +131,6 @@ macro_rules! impl_data_provider {
         impl_datetime_names_month_indian_v1!($provider);
         impl_datetime_names_month_ethiopian_v1!($provider);
         impl_datetime_patterns_date_coptic_v1!($provider);
-        impl_timezone_metazone_periods_v1!($provider);
         impl_datetime_patterns_date_buddhist_v1!($provider);
         impl_timezone_names_standard_long_v1!($provider);
         impl_datetime_names_month_japanese_v1!($provider);

@@ -20,7 +20,7 @@ mod algorithms;
 /// algorithm. See *[the design doc]* for a detailed description and [#2243](
 /// https://github.com/unicode-org/icu4x/issues/2243) to track alignment with *UTS #35*.
 ///
-/// If running fallback in a loop, use [`DataLocale::is_default()`] to break from the loop.
+/// If running fallback in a loop, use [`DataLocale::is_unknown()`] to break from the loop.
 ///
 /// # Examples
 ///
@@ -104,8 +104,7 @@ impl LocaleFallbacker {
     ///
     /// [📚 Help choosing a constructor](icu_provider::constructors)
     #[cfg(feature = "compiled_data")]
-    #[allow(clippy::new_ret_no_self)] // keeping constructors together
-    #[allow(clippy::new_without_default)] // Deliberate choice, see #5554
+    #[expect(clippy::new_ret_no_self)] // keeping constructors together
     pub const fn new<'a>() -> LocaleFallbackerBorrowed<'a> {
         // Safety: we're transmuting down from LocaleFallbackerBorrowed<'static> to LocaleFallbackerBorrowed<'a>
         // ZeroMaps use associated types in a way that confuse the compiler which gives up and marks them
@@ -146,7 +145,7 @@ impl LocaleFallbacker {
                 language_script: Default::default(),
                 // Unused
                 und: (
-                    Default::default(),
+                    Language::UNKNOWN,
                     crate::subtags::script!("Zzzz"),
                     crate::subtags::region!("ZZ"),
                 ),
@@ -189,7 +188,7 @@ impl LocaleFallbackerBorrowed<'static> {
     ///
     /// [📚 Help choosing a constructor](icu_provider::constructors)
     #[cfg(feature = "compiled_data")]
-    #[allow(clippy::new_without_default)]
+    #[expect(clippy::new_without_default)]
     pub const fn new() -> Self {
         Self {
             likely_subtags: crate::provider::Baked::SINGLETON_LOCALE_LIKELY_SUBTAGS_LANGUAGE_V1,

@@ -4,47 +4,65 @@
 
 use std::collections::HashSet;
 
+use crate::debug_provider::DebugProvider;
 use crate::{cldr_serde, IterableDataProviderCached, SourceDataProvider};
-use calendar::patterns::GenericLengthPatterns;
 use icu::datetime::fieldsets::enums::*;
 use icu::datetime::options::Length;
-use icu::datetime::provider::calendar::{DateSkeletonPatterns, TimeLengths};
+use icu::datetime::pattern::{ErrorField, FixedCalendarDateTimeNames};
 use icu::datetime::provider::fields::components;
 use icu::datetime::provider::pattern::{reference, runtime, CoarseHourCycle};
-use icu::datetime::provider::skeleton::PatternPlurals;
+use icu::datetime::provider::skeleton::*;
 use icu::datetime::provider::*;
 use icu::plurals::PluralElements;
 use icu_locale_core::preferences::extensions::unicode::keywords::HourCycle;
 use icu_provider::prelude::*;
 
+use super::legacy::TimeLengths;
 use super::DatagenCalendar;
 
-enum ExactOrSynthetic<T> {
-    Exact(T),
-    Synthetic(T),
+type VariantPatternsElement<'a> = PatternsWithDistance<PluralElements<runtime::Pattern<'a>>>;
+
+/// A set of patterns that may be used in the same formatter depending on input variations.
+#[derive(Debug)]
+struct VariantPatterns<'a> {
+    standard: VariantPatternsElement<'a>,
+    variant0: Option<VariantPatternsElement<'a>>,
+    variant1: Option<VariantPatternsElement<'a>>,
 }
 
-impl<T> ExactOrSynthetic<T> {
-    pub fn map<V>(self, mut f: impl FnMut(T) -> V) -> ExactOrSynthetic<V> {
-        use ExactOrSynthetic::*;
-        match self {
-            Exact(t) => Exact(f(t)),
-            Synthetic(t) => Synthetic(f(t)),
+impl<'a> VariantPatterns<'a> {
+    pub fn iter_in_quality_order_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut VariantPatternsElement<'a>> + '_ {
+        let mut list = [
+            Some(&mut self.standard),
+            self.variant0.as_mut(),
+            self.variant1.as_mut(),
+        ];
+        list.sort_by_key(|variant| variant.as_ref().map(|v| v.distance));
+        list.into_iter().flatten()
+    }
+}
+
+/// Some patterns associated with a [`SkeletonQuality`].
+#[derive(Debug)]
+struct PatternsWithDistance<T> {
+    inner: T,
+    distance: SkeletonQuality,
+}
+
+impl<T> PatternsWithDistance<T> {
+    pub fn map<V>(self, mut f: impl FnMut(T) -> V) -> PatternsWithDistance<V> {
+        PatternsWithDistance {
+            inner: f(self.inner),
+            distance: self.distance,
         }
     }
     pub fn inner(&self) -> &T {
-        use ExactOrSynthetic::*;
-        match self {
-            Exact(t) => t,
-            Synthetic(t) => t,
-        }
+        &self.inner
     }
     pub fn into_inner(self) -> T {
-        use ExactOrSynthetic::*;
-        match self {
-            Exact(t) => t,
-            Synthetic(t) => t,
-        }
+        self.inner
     }
 }
 
@@ -53,7 +71,7 @@ fn select_pattern<'data>(
     skeletons: &DateSkeletonPatterns<'data>,
     preferred_hour_cycle: CoarseHourCycle,
     length_patterns: &GenericLengthPatterns<'data>,
-) -> ExactOrSynthetic<PatternPlurals<'data>> {
+) -> PatternsWithDistance<PatternPlurals<'data>> {
     use icu::datetime::provider::pattern::{runtime, PatternItem};
     use icu::datetime::provider::skeleton::{create_best_pattern_for_fields, BestSkeleton};
     use icu_locale_core::preferences::extensions::unicode::keywords::HourCycle;
@@ -64,8 +82,10 @@ fn select_pattern<'data>(
     };
     let fields = bag.to_vec_fields(default_hour_cycle);
     match create_best_pattern_for_fields(skeletons, length_patterns, &fields, &bag, false) {
-        BestSkeleton::AllFieldsMatch(p) => ExactOrSynthetic::Exact(p),
-        BestSkeleton::MissingOrExtraFields(p) => ExactOrSynthetic::Synthetic(p),
+        BestSkeleton::AllFieldsMatch(p, distance) => PatternsWithDistance { inner: p, distance },
+        BestSkeleton::MissingOrExtraFields(p, distance) => {
+            PatternsWithDistance { inner: p, distance }
+        }
         BestSkeleton::NoMatch => {
             // Build a last-resort pattern that contains all of the requested fields.
             // This is NOT in the CLDR standard! Better would be:
@@ -79,7 +99,10 @@ fn select_pattern<'data>(
                 .skip(1)
                 .collect::<Vec<_>>();
             let pattern = runtime::Pattern::from(pattern_items);
-            ExactOrSynthetic::Synthetic(PatternPlurals::SinglePattern(pattern))
+            PatternsWithDistance {
+                inner: PatternPlurals::SinglePattern(pattern),
+                distance: SkeletonQuality::worst(),
+            }
         }
     }
 }
@@ -128,13 +151,13 @@ impl SourceDataProvider {
         let data = self.get_datetime_resources(locale, calendar)?;
 
         let length_combinations_v1 = GenericLengthPatterns::from(&data.datetime_formats);
-        let time_lengths_v1 = TimeLengths::from(&data);
+        let time_lengths_v1 = TimeLengths::from_serde(&data, locale);
         let skeleton_patterns =
             DateSkeletonPatterns::from(&data.datetime_formats.available_formats);
 
         fn expand_pp_to_pe(
-            value: ExactOrSynthetic<PatternPlurals>,
-        ) -> ExactOrSynthetic<PluralElements<runtime::Pattern>> {
+            value: PatternsWithDistance<PatternPlurals>,
+        ) -> PatternsWithDistance<PluralElements<runtime::Pattern>> {
             value.map(|pp| match pp {
                 PatternPlurals::MultipleVariants(variants) => PluralElements::new(variants.other)
                     .with_zero_value(variants.zero.clone())
@@ -144,6 +167,48 @@ impl SourceDataProvider {
                     .with_many_value(variants.many.clone()),
                 PatternPlurals::SinglePattern(pattern) => PluralElements::new(pattern),
             })
+        }
+
+        fn enforce_consistent_field_lengths(
+            trio: &mut VariantPatterns,
+            mut log_fn: impl FnMut(ErrorField, ErrorField, SkeletonQuality),
+        ) {
+            use icu::datetime::pattern::{DateTimePattern, PatternLoadError};
+            use icu::datetime::provider::fields::*;
+            use icu::datetime::provider::pattern::PatternItem;
+            let mut names =
+                FixedCalendarDateTimeNames::<()>::new_without_number_formatting(Default::default());
+            for variant in trio.iter_in_quality_order_mut() {
+                variant.inner.for_each_mut(|pattern| {
+                    // We need to fix conflicting field errors. We keep checking until we can
+                    // load data for a pattern without errors. Each evaluation of the loop will
+                    // reduce the number of errors by 1.
+                    while let Err(e) = names
+                        .load_for_pattern(&DebugProvider, &DateTimePattern::from(pattern.clone()))
+                    {
+                        let PatternLoadError::ConflictingField {
+                            field: requested_field,
+                            previous_field,
+                        } = e
+                        else {
+                            panic!("only know how to fix ConflictingField, but got: {e:?}")
+                        };
+                        log_fn(previous_field, requested_field, variant.distance);
+                        let requested_field = Field::from(requested_field);
+                        let previous_field = Field::from(previous_field);
+                        let mut pattern_items = reference::Pattern::from(&*pattern).into_items();
+                        for pattern_item in pattern_items.iter_mut() {
+                            let PatternItem::Field(field) = pattern_item else {
+                                continue; // nothing to do: not a Field
+                            };
+                            if *field == requested_field {
+                                *field = previous_field;
+                            }
+                        }
+                        *pattern = runtime::Pattern::from(pattern_items);
+                    }
+                })
+            }
         }
 
         let [long, medium, short] = [Length::Long, Length::Medium, Length::Short]
@@ -169,21 +234,21 @@ impl SourceDataProvider {
                         components_with_full_year.year = Some(components::Year::Numeric);
                         let mut components_with_era = components_with_full_year;
                         components_with_era.era = Some(components::Text::Short);
-                        (
-                            pattern,
-                            Some(expand_pp_to_pe(select_pattern(
+                        VariantPatterns {
+                            standard: pattern,
+                            variant0: Some(expand_pp_to_pe(select_pattern(
                                 components_with_full_year,
                                 &skeleton_patterns,
                                 time_lengths_v1.preferred_hour_cycle,
                                 &length_combinations_v1,
                             ))),
-                            Some(expand_pp_to_pe(select_pattern(
+                            variant1: Some(expand_pp_to_pe(select_pattern(
                                 components_with_era,
                                 &skeleton_patterns,
                                 time_lengths_v1.preferred_hour_cycle,
                                 &length_combinations_v1,
                             ))),
-                        )
+                        }
                     }
                     components::Bag { hour: Some(_), .. } => {
                         let mut components_with_minute = components;
@@ -191,58 +256,98 @@ impl SourceDataProvider {
                         let mut components_with_second = components;
                         components_with_second.minute = Some(components::Numeric::Numeric);
                         components_with_second.second = Some(components::Numeric::Numeric);
-                        (
-                            pattern,
-                            Some(expand_pp_to_pe(select_pattern(
+                        VariantPatterns {
+                            standard: pattern,
+                            variant0: Some(expand_pp_to_pe(select_pattern(
                                 components_with_minute,
                                 &skeleton_patterns,
                                 time_lengths_v1.preferred_hour_cycle,
                                 &length_combinations_v1,
                             ))),
-                            Some(expand_pp_to_pe(select_pattern(
+                            variant1: Some(expand_pp_to_pe(select_pattern(
                                 components_with_second,
                                 &skeleton_patterns,
                                 time_lengths_v1.preferred_hour_cycle,
                                 &length_combinations_v1,
                             ))),
-                        )
+                        }
                     }
-                    _ => (pattern, None, None),
+                    _ => VariantPatterns {
+                        standard: pattern,
+                        variant0: None,
+                        variant1: None,
+                    },
                 }
+            })
+            .map(|mut trio| {
+                enforce_consistent_field_lengths(&mut trio, |previous_field, field, distance| {
+                    if !distance.is_excellent_match() {
+                        return; // skip logging if the pattern was garbage already
+                    }
+                    use icu::datetime::provider::fields::Field;
+                    let previous_field = Field::from(previous_field);
+                    let field = Field::from(field);
+                    let attributes = attributes.as_str();
+                    let calendar = calendar.map(|c| c.cldr_name()).unwrap_or("generic");
+                    log::warn!(
+                        "{calendar}/{locale}/{attributes}: conflicting field: {previous_field} <=> {field}"
+                    )
+                });
+                trio
             });
         let builder = PackedPatternsBuilder {
             standard: LengthPluralElements {
-                long: long.0.inner().as_ref().map(runtime::Pattern::as_ref),
-                medium: medium.0.inner().as_ref().map(runtime::Pattern::as_ref),
-                short: short.0.inner().as_ref().map(runtime::Pattern::as_ref),
+                long: long.standard.inner().as_ref().map(runtime::Pattern::as_ref),
+                medium: medium
+                    .standard
+                    .inner()
+                    .as_ref()
+                    .map(runtime::Pattern::as_ref),
+                short: short
+                    .standard
+                    .inner()
+                    .as_ref()
+                    .map(runtime::Pattern::as_ref),
             },
             variant0: Some(LengthPluralElements {
                 long: long
-                    .1
+                    .variant0
                     .map(|x| x.into_inner())
-                    .unwrap_or(long.0.inner().as_ref().map(runtime::Pattern::as_ref)),
-                medium: medium
-                    .1
-                    .map(|x| x.into_inner())
-                    .unwrap_or(medium.0.inner().as_ref().map(runtime::Pattern::as_ref)),
-                short: short
-                    .1
-                    .map(|x| x.into_inner())
-                    .unwrap_or(short.0.inner().as_ref().map(runtime::Pattern::as_ref)),
+                    .unwrap_or(long.standard.inner().as_ref().map(runtime::Pattern::as_ref)),
+                medium: medium.variant0.map(|x| x.into_inner()).unwrap_or(
+                    medium
+                        .standard
+                        .inner()
+                        .as_ref()
+                        .map(runtime::Pattern::as_ref),
+                ),
+                short: short.variant0.map(|x| x.into_inner()).unwrap_or(
+                    short
+                        .standard
+                        .inner()
+                        .as_ref()
+                        .map(runtime::Pattern::as_ref),
+                ),
             }),
             variant1: Some(LengthPluralElements {
                 long: long
-                    .2
+                    .variant1
                     .map(|x| x.into_inner())
-                    .unwrap_or(long.0.inner().as_ref().map(runtime::Pattern::as_ref)),
-                medium: medium
-                    .2
-                    .map(|x| x.into_inner())
-                    .unwrap_or(medium.0.inner().as_ref().map(runtime::Pattern::as_ref)),
-                short: short
-                    .2
-                    .map(|x| x.into_inner())
-                    .unwrap_or(short.0.inner().as_ref().map(runtime::Pattern::as_ref)),
+                    .unwrap_or(long.standard.inner().as_ref().map(runtime::Pattern::as_ref)),
+                medium: medium.variant1.map(|x| x.into_inner()).unwrap_or(
+                    medium
+                        .standard
+                        .inner()
+                        .as_ref()
+                        .map(runtime::Pattern::as_ref),
+                ),
+                short: short.variant1.map(|x| x.into_inner()).unwrap_or(
+                    short
+                        .standard
+                        .inner()
+                        .as_ref()
+                        .map(runtime::Pattern::as_ref),
+                ),
             }),
         };
         Ok(builder.build())
@@ -596,8 +701,8 @@ fn test_en_overlap_patterns() {
     6
   ],
   "elements": [
-    "cccc, h a",
-    "ccc, h a",
+    "EEEE, h a",
+    "EEE, h a",
     "EEEE h:m a",
     "E h:mm a",
     "EEEE h:m:s a",
@@ -788,7 +893,7 @@ mod date_skeleton_consistency_tests {
         let mut num_problems = 0;
         let data = provider.get_datetime_resources(locale, Some(cal)).unwrap();
         let length_combinations_v1 = GenericLengthPatterns::from(&data.datetime_formats);
-        let time_lengths_v1 = TimeLengths::from(&data);
+        let time_lengths_v1 = TimeLengths::from_serde(&data, locale);
         let skeleton_patterns =
             DateSkeletonPatterns::from(&data.datetime_formats.available_formats);
         let skeleton_pattern_set = data

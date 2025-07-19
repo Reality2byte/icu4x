@@ -169,6 +169,7 @@ pub const EXTRA_SOURCE_DEPS: &[&str] = &[
     "indexmap",
     "itertools",
     "itoa",
+    "ixdtf",
     "libc",
     "matrixmultiply",
     "ndarray",
@@ -225,6 +226,7 @@ pub const EXTRA_ZIP_DEPS: &[&str] = &[
     "serde-spanned",
     "serde-value",
     "simd-adler32",
+    "typed-arena",
     "zip",
     "zopfli",
 ];

@@ -99,7 +99,7 @@ impl PatternMetadata {
     }
 
     pub(crate) fn to_four_bit_metadata(self) -> FourBitMetadata {
-        #[allow(clippy::unwrap_used)] // valid values for self.0 are 0, 1, 2, 3, or 4
+        #[expect(clippy::unwrap_used)] // valid values for self.0 are 0, 1, 2, 3, or 4
         FourBitMetadata::try_from_byte(self.0).unwrap()
     }
 
@@ -116,7 +116,6 @@ impl Default for PatternMetadata {
 }
 
 impl Pattern<'_> {
-    #[cfg(feature = "datagen")]
     pub(crate) fn into_owned(self) -> Pattern<'static> {
         Pattern {
             items: self.items.into_owned(),

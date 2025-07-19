@@ -25,16 +25,20 @@ pub mod ffi {
 
     #[diplomat::rust_link(icu::segmenter::options::LineBreakStrictness, Enum)]
     #[diplomat::enum_convert(icu_segmenter::options::LineBreakStrictness, needs_wildcard)]
+    #[non_exhaustive]
     pub enum LineBreakStrictness {
         Loose,
         Normal,
+        #[diplomat::attr(auto, default)]
         Strict,
         Anywhere,
     }
 
     #[diplomat::rust_link(icu::segmenter::options::LineBreakWordOption, Enum)]
     #[diplomat::enum_convert(icu_segmenter::options::LineBreakWordOption, needs_wildcard)]
+    #[non_exhaustive]
     pub enum LineBreakWordOption {
+        #[diplomat::attr(auto, default)]
         Normal,
         BreakAll,
         KeepAll,
@@ -49,18 +53,21 @@ pub mod ffi {
 
     #[diplomat::opaque]
     #[diplomat::rust_link(icu::segmenter::iterators::LineBreakIterator, Struct)]
+    #[diplomat::attr(demo_gen, disable)] // iterator type
     pub struct LineBreakIteratorUtf8<'a>(
         icu_segmenter::iterators::LineBreakIterator<'a, 'a, PotentiallyIllFormedUtf8>,
     );
 
     #[diplomat::opaque]
     #[diplomat::rust_link(icu::segmenter::iterators::LineBreakIterator, Struct)]
+    #[diplomat::attr(demo_gen, disable)] // iterator type
     pub struct LineBreakIteratorUtf16<'a>(
         icu_segmenter::iterators::LineBreakIterator<'a, 'a, Utf16>,
     );
 
     #[diplomat::opaque]
     #[diplomat::rust_link(icu::segmenter::iterators::LineBreakIterator, Struct)]
+    #[diplomat::attr(demo_gen, disable)] // iterator type
     pub struct LineBreakIteratorLatin1<'a>(
         icu_segmenter::iterators::LineBreakIterator<'a, 'a, Latin1>,
     );

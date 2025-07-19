@@ -7,9 +7,10 @@
 
 use crate::scaffold::*;
 use icu_calendar::types::DayOfYear;
-use icu_calendar::{AsCalendar, Calendar, Iso};
+use icu_calendar::{AsCalendar, Calendar};
 use icu_time::scaffold::IntoOption;
-use icu_time::{zone::TimeZoneVariant, Hour, Minute, Nanosecond, Second};
+use icu_time::zone::ZoneNameTimestamp;
+use icu_time::{Hour, Minute, Nanosecond, Second};
 
 use icu_calendar::Date;
 use icu_time::{zone::UtcOffset, Time, TimeZone};
@@ -51,35 +52,38 @@ pub struct DateTimeInputUnchecked {
     /// The time zone UTC offset, required for field sets with
     /// certain time zone styles.
     pub(crate) zone_offset: Option<UtcOffset>,
-    /// The time zone variant, required for field sets with
-    /// certain time zone styles.
-    pub(crate) zone_variant: Option<TimeZoneVariant>,
     /// The local ISO time, required for field sets with
     /// certain time zone styles.
-    pub(crate) zone_local_time: Option<(Date<Iso>, Time)>,
+    pub(crate) zone_name_timestamp: Option<ZoneNameTimestamp>,
 }
 
 impl DateTimeInputUnchecked {
     /// Sets all fields from a [`Date`] input.
-    pub fn set_date_fields<C: Calendar, A: AsCalendar<Calendar = C>>(&mut self, input: Date<A>) {
-        self.year = Some(input.year());
-        self.month = Some(input.month());
-        self.day_of_month = Some(input.day_of_month());
-        self.iso_weekday = Some(input.day_of_week());
-        self.day_of_year = Some(input.day_of_year());
+    ///
+    /// This method does not check the calendar of the date! The caller is
+    /// responsible for making sure the calendar matches the formatter.
+    pub fn set_date_fields_unchecked<C: Calendar, A: AsCalendar<Calendar = C>>(
+        &mut self,
+        date_in_calendar: Date<A>,
+    ) {
+        self.year = Some(date_in_calendar.year());
+        self.month = Some(date_in_calendar.month());
+        self.day_of_month = Some(date_in_calendar.day_of_month());
+        self.iso_weekday = Some(date_in_calendar.day_of_week());
+        self.day_of_year = Some(date_in_calendar.day_of_year());
     }
 
     /// Sets all fields from a [`Time`] input.
-    pub fn set_time_fields(&mut self, input: Time) {
-        self.hour = Some(input.hour);
-        self.minute = Some(input.minute);
-        self.second = Some(input.second);
-        self.subsecond = Some(input.subsecond);
+    pub fn set_time_fields(&mut self, time: Time) {
+        self.hour = Some(time.hour);
+        self.minute = Some(time.minute);
+        self.second = Some(time.second);
+        self.subsecond = Some(time.subsecond);
     }
 
     /// Sets the time zone UTC offset.
-    pub fn set_time_zone_utc_offset(&mut self, offset: UtcOffset) {
-        self.zone_offset = Some(offset);
+    pub fn set_time_zone_utc_offset(&mut self, utc_offset: UtcOffset) {
+        self.zone_offset = Some(utc_offset);
     }
 
     /// Sets the time zone ID.
@@ -88,14 +92,13 @@ impl DateTimeInputUnchecked {
     }
 
     /// Sets the local time for time zone name resolution.
-    pub fn set_time_zone_local_time(&mut self, local_time: (Date<Iso>, Time)) {
-        self.zone_local_time = Some(local_time);
+    pub fn set_time_zone_name_timestamp(&mut self, timestamp: ZoneNameTimestamp) {
+        self.zone_name_timestamp = Some(timestamp);
     }
 
-    /// Sets the time zone variant.
-    pub fn set_time_zone_variant(&mut self, zone_variant: TimeZoneVariant) {
-        self.zone_variant = Some(zone_variant);
-    }
+    /// No-op
+    #[deprecated]
+    pub fn set_time_zone_variant(&mut self, _zone_variant: icu_time::zone::TimeZoneVariant) {}
 
     /// Construct given neo date input instances.
     pub(crate) fn extract_from_neo_input<D, T, Z, I>(input: &I) -> Self
@@ -115,8 +118,7 @@ impl DateTimeInputUnchecked {
             + GetField<T::NanosecondInput>
             + GetField<Z::TimeZoneIdInput>
             + GetField<Z::TimeZoneOffsetInput>
-            + GetField<Z::TimeZoneVariantInput>
-            + GetField<Z::TimeZoneLocalTimeInput>,
+            + GetField<Z::TimeZoneNameTimestampInput>,
     {
         Self {
             year: GetField::<D::YearInput>::get_field(input).into_option(),
@@ -130,8 +132,8 @@ impl DateTimeInputUnchecked {
             subsecond: GetField::<T::NanosecondInput>::get_field(input).into_option(),
             zone_id: GetField::<Z::TimeZoneIdInput>::get_field(input).into_option(),
             zone_offset: GetField::<Z::TimeZoneOffsetInput>::get_field(input).into_option(),
-            zone_variant: GetField::<Z::TimeZoneVariantInput>::get_field(input).into_option(),
-            zone_local_time: GetField::<Z::TimeZoneLocalTimeInput>::get_field(input).into_option(),
+            zone_name_timestamp: GetField::<Z::TimeZoneNameTimestampInput>::get_field(input)
+                .into_option(),
         }
     }
 }

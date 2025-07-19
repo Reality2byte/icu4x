@@ -216,7 +216,7 @@ impl AsULE for FieldSymbol {
         FieldSymbolULE(self.idx())
     }
     fn from_unaligned(unaligned: Self::ULE) -> Self {
-        #[allow(clippy::unwrap_used)] // OK because the ULE is pre-validated
+        #[expect(clippy::unwrap_used)] // OK because the ULE is pre-validated
         Self::from_idx(unaligned.0).unwrap()
     }
 }
@@ -396,8 +396,7 @@ macro_rules! field_type {
     );
     ($(#[$enum_attr:meta])* $i:ident; { $( $(#[$variant_attr:meta])* $key:literal => $val:ident = $idx:expr,)* }; $($ule_name:ident)?) => (
         #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Copy, yoke::Yokeable, zerofrom::ZeroFrom)]
-        // FIXME: This should be replaced with a custom derive.
-        // See: https://github.com/unicode-org/icu4x/issues/1044
+        // TODO(#1044): This should be replaced with a custom derive.
         #[cfg_attr(feature = "datagen", derive(serde::Serialize, databake::Bake))]
         #[cfg_attr(feature = "datagen", databake(path = icu_datetime::fields))]
         #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
@@ -773,7 +772,6 @@ impl LengthType for TimeZone {
 #[cfg_attr(feature = "datagen", derive(serde::Serialize, databake::Bake))]
 #[cfg_attr(feature = "datagen", databake(path = icu_datetime::fields))]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
-#[allow(clippy::enum_variant_names)]
 #[repr(u8)]
 #[zerovec::make_ule(DecimalSecondULE)]
 #[zerovec::derive(Debug)]

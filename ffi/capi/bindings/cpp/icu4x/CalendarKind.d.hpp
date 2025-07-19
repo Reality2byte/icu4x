@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 
 namespace icu4x {
@@ -39,16 +40,16 @@ namespace capi {
       CalendarKind_Persian = 16,
       CalendarKind_Roc = 17,
     };
-    
+
     typedef struct CalendarKind_option {union { CalendarKind ok; }; bool is_ok; } CalendarKind_option;
 } // namespace capi
 } // namespace
 
 namespace icu4x {
 /**
- * The various calendar types currently supported by [`Calendar`]
+ * The various calendar types currently supported by {@link Calendar}
  *
- * See the [Rust documentation for `AnyCalendarKind`](https://docs.rs/icu/latest/icu/calendar/enum.AnyCalendarKind.html) for more information.
+ * See the [Rust documentation for `AnyCalendarKind`](https://docs.rs/icu/2.0.0/icu/calendar/enum.AnyCalendarKind.html) for more information.
  */
 class CalendarKind {
 public:
@@ -73,7 +74,8 @@ public:
     Roc = 17,
   };
 
-  CalendarKind() = default;
+  CalendarKind(): value(Value::Iso) {}
+
   // Implicit conversions between enum and ::Value
   constexpr CalendarKind(Value v) : value(v) {}
   constexpr operator Value() const { return value; }
@@ -81,9 +83,9 @@ public:
   explicit operator bool() const = delete;
 
   /**
-   * Creates a new [`CalendarKind`] for the specified locale, using compiled data.
+   * Creates a new {@link CalendarKind} for the specified locale, using compiled data.
    *
-   * See the [Rust documentation for `new`](https://docs.rs/icu/latest/icu/calendar/enum.AnyCalendarKind.html#method.new) for more information.
+   * See the [Rust documentation for `new`](https://docs.rs/icu/2.0.0/icu/calendar/enum.AnyCalendarKind.html#method.new) for more information.
    */
   inline static icu4x::CalendarKind create(const icu4x::Locale& locale);
 

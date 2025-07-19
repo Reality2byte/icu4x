@@ -66,7 +66,7 @@ pub(crate) enum DatePatternDataBorrowed<'a> {
 
 /// This enum represents both time patterns and overlap patterns between non-year dates and times.
 //
-// TODO: Consider reducing data size by filtering out explicit overlap patterns when they are
+// TODO(#5387): Consider reducing data size by filtering out explicit overlap patterns when they are
 // the same as their individual patterns with glue.
 #[derive(Debug, Clone)]
 pub(crate) struct TimePatternSelectionData {
@@ -109,8 +109,6 @@ impl ItemsAndOptions<'_> {
         }
     }
 }
-
-// TODO: Use markers instead of an enum for DateTimeFormatter pattern storage.
 
 #[derive(Debug, Clone)]
 pub(crate) struct DateTimeZonePatternSelectionData {
@@ -402,7 +400,6 @@ impl<'a> ZonePatternDataBorrowed<'a> {
 }
 
 impl DateTimeZonePatternSelectionData {
-    #[allow(clippy::too_many_arguments)] // private function with lots of generics
     pub(crate) fn try_new_with_skeleton(
         date_provider: &(impl BoundDataProvider<ErasedPackedPatterns> + ?Sized),
         time_provider: &(impl BoundDataProvider<ErasedPackedPatterns> + ?Sized),
@@ -734,14 +731,14 @@ impl<'a> DateTimeZonePatternDataBorrowed<'a> {
 
     pub(crate) fn to_pattern(self) -> DateTimePattern {
         let pattern = self.iter_items().collect::<runtime::Pattern>();
-        DateTimePattern::from_runtime_pattern(pattern)
+        DateTimePattern::from(pattern)
     }
 }
 
 impl<'a> ItemsAndOptions<'a> {
     pub(crate) fn iter_items(self) -> impl Iterator<Item = PatternItem> + 'a {
         self.items.iter().map(move |mut pattern_item| {
-            #[allow(clippy::single_match)] // need `ref mut`, which doesn't work in `if let`?
+            #[expect(clippy::single_match)] // need `ref mut`, which doesn't work in `if let`?
             match &mut pattern_item {
                 PatternItem::Field(ref mut field) => {
                     let alignment = self.alignment.unwrap_or_default();

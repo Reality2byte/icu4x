@@ -106,7 +106,6 @@ impl Bag {
         }
     }
 
-    #[allow(clippy::wrong_self_convention)]
     /// Converts the components::Bag into a `Vec<Field>`. The fields will be ordered in from most
     /// significant field to least significant. This is the order the fields are listed in
     /// the UTS 35 table - <https://unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table>
@@ -142,7 +141,7 @@ impl Bag {
                 symbol: FieldSymbol::Year(match year {
                     Year::Numeric | Year::TwoDigit => fields::Year::Calendar,
                     Year::NumericWeekOf | Year::TwoDigitWeekOf => {
-                        unimplemented!("fields::Year::WeekOf")
+                        unimplemented!("#5643 fields::Year::WeekOf")
                     }
                 }),
                 length: match year {

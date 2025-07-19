@@ -7,52 +7,40 @@ import wasm from "./diplomat-wasm.mjs";
 import * as diplomatRuntime from "./diplomat-runtime.mjs";
 
 
-/** 
- * See the [Rust documentation for `CollatorOptions`](https://docs.rs/icu/latest/icu/collator/options/struct.CollatorOptions.html) for more information.
+
+/**
+ * See the [Rust documentation for `CollatorOptions`](https://docs.rs/icu/2.0.0/icu/collator/options/struct.CollatorOptions.html) for more information.
  */
-
-
 export class CollatorOptions {
-    
     #strength;
-    
-    get strength()  {
+    get strength() {
         return this.#strength;
-    } 
-    set strength(value) {
+    }
+    set strength(value){
         this.#strength = value;
     }
-    
     #alternateHandling;
-    
-    get alternateHandling()  {
+    get alternateHandling() {
         return this.#alternateHandling;
-    } 
-    set alternateHandling(value) {
+    }
+    set alternateHandling(value){
         this.#alternateHandling = value;
     }
-    
     #maxVariable;
-    
-    get maxVariable()  {
+    get maxVariable() {
         return this.#maxVariable;
-    } 
-    set maxVariable(value) {
+    }
+    set maxVariable(value){
         this.#maxVariable = value;
     }
-    
     #caseLevel;
-    
-    get caseLevel()  {
+    get caseLevel() {
         return this.#caseLevel;
-    } 
-    set caseLevel(value) {
+    }
+    set caseLevel(value){
         this.#caseLevel = value;
     }
-    
-    /** Create `CollatorOptions` from an object that contains all of `CollatorOptions`s fields.
-    * Optional fields do not need to be included in the provided object.
-    */
+    /** @internal */
     static fromFields(structObj) {
         return new CollatorOptions(structObj);
     }
@@ -91,12 +79,17 @@ export class CollatorOptions {
 
     // Return this struct in FFI function friendly format.
     // Returns an array that can be expanded with spread syntax (...)
-    
     _intoFFI(
         functionCleanupArena,
         appendArrayMap
     ) {
-        return [...diplomatRuntime.optionToArgsForCalling(this.#strength, 4, 4, (arrayBuffer, offset, jsValue) => [diplomatRuntime.writeToArrayBuffer(arrayBuffer, offset + 0, jsValue.ffiValue, Int32Array)]), ...diplomatRuntime.optionToArgsForCalling(this.#alternateHandling, 4, 4, (arrayBuffer, offset, jsValue) => [diplomatRuntime.writeToArrayBuffer(arrayBuffer, offset + 0, jsValue.ffiValue, Int32Array)]), ...diplomatRuntime.optionToArgsForCalling(this.#maxVariable, 4, 4, (arrayBuffer, offset, jsValue) => [diplomatRuntime.writeToArrayBuffer(arrayBuffer, offset + 0, jsValue.ffiValue, Int32Array)]), ...diplomatRuntime.optionToArgsForCalling(this.#caseLevel, 4, 4, (arrayBuffer, offset, jsValue) => [diplomatRuntime.writeToArrayBuffer(arrayBuffer, offset + 0, jsValue.ffiValue, Int32Array)])]
+        let buffer = diplomatRuntime.DiplomatBuf.struct(wasm, 32, 4);
+
+        this._writeToArrayBuffer(wasm.memory.buffer, buffer.ptr, functionCleanupArena, appendArrayMap);
+
+        functionCleanupArena.alloc(buffer);
+
+        return buffer.ptr;
     }
 
     static _fromSuppliedValue(internalConstructor, obj) {
@@ -144,6 +137,7 @@ export class CollatorOptions {
 
         return new CollatorOptions(structObj);
     }
+
 
     constructor(structObj) {
         return this.#internalConstructor(...arguments)

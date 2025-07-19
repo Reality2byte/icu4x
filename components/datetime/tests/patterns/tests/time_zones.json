@@ -86,7 +86,7 @@
     "locale": "ru",
     "datetime": "2021-01-11T12:00:00.000+00:00[Antarctica/Troll]",
     "expectations": {
-      "z": "GMT",
+      "z": "GMT+0",
       "zzzz": "Среднее время по Гринвичу",
 
       "v": "Тролль",
@@ -95,7 +95,7 @@
       "VVV": "Тролль",
       "VVVV": "Тролль",
 
-      "O": "GMT",
+      "O": "GMT+0",
       "OOOO": "GMT+00:00",
 
       "X": "Z"
@@ -162,6 +162,36 @@
 
       "xxxx": "-0400",
       "XXXXX": "-04:00"
+    }
+  },
+  {
+    "locale": "en",
+    "datetime": "2016-09-06T23:59:59.999999999+03[Europe/Istanbul]",
+    "expectations": {
+      "zzzz": "Eastern European Summer Time"
+    }
+  },
+  {
+    "locale": "en",
+    "datetime": "2016-09-07T00:00:00+03[Europe/Istanbul]",
+    "expectations": {
+      "zzzz": "Türkiye Standard Time"
+    }
+  },
+  {
+    "locale": "en",
+    "datetime": "2013-08-15T12:00:00+01[Africa/Windhoek]",
+    "expectations": {
+      "vvvv": "West Africa Time",
+      "zzzz": "West Africa Standard Time"
+    }
+  },
+  {
+    "locale": "en",
+    "datetime": "2013-09-15T12:00:00+02[Africa/Windhoek]",
+    "expectations": {
+      "vvvv": "West Africa Time",
+      "zzzz": "West Africa Summer Time"
     }
   },
   {
@@ -237,7 +267,7 @@
       "VVV": "Unknown City",
       "VVVV": "GMT+00:00",
 
-      "O": "GMT",
+      "O": "GMT+0",
       "OOOO": "GMT+00:00",
 
       "xxxx": "+0000",
@@ -257,7 +287,7 @@
       "VVV": "Unknown City",
       "VVVV": "GMT+00:00",
 
-      "O": "GMT",
+      "O": "GMT+0",
       "OOOO": "GMT+00:00",
 
       "xxxx": "+0000",

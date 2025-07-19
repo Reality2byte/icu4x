@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 
 namespace icu4x {
@@ -40,14 +41,14 @@ public:
   /**
    * The primary direction of this paragraph
    *
-   * See the [Rust documentation for `level_at`](https://docs.rs/unicode_bidi/latest/unicode_bidi/struct.Paragraph.html#method.level_at) for more information.
+   * See the [Rust documentation for `level_at`](https://docs.rs/unicode_bidi/0.3.11/unicode_bidi/struct.Paragraph.html#method.level_at) for more information.
    */
   inline icu4x::BidiDirection direction() const;
 
   /**
    * The number of bytes in this paragraph
    *
-   * See the [Rust documentation for `len`](https://docs.rs/unicode_bidi/latest/unicode_bidi/struct.ParagraphInfo.html#method.len) for more information.
+   * See the [Rust documentation for `len`](https://docs.rs/unicode_bidi/0.3.11/unicode_bidi/struct.ParagraphInfo.html#method.len) for more information.
    */
   inline size_t size() const;
 
@@ -65,9 +66,11 @@ public:
    * Reorder a line based on display order. The ranges are specified relative to the source text and must be contained
    * within this paragraph's range.
    *
-   * See the [Rust documentation for `level_at`](https://docs.rs/unicode_bidi/latest/unicode_bidi/struct.Paragraph.html#method.level_at) for more information.
+   * See the [Rust documentation for `level_at`](https://docs.rs/unicode_bidi/0.3.11/unicode_bidi/struct.Paragraph.html#method.level_at) for more information.
    */
   inline std::optional<std::string> reorder_line(size_t range_start, size_t range_end) const;
+  template<typename W>
+  inline std::optional<std::monostate> reorder_line_write(size_t range_start, size_t range_end, W& writeable_output) const;
 
   /**
    * Get the BIDI level at a particular byte index in this paragraph.
@@ -76,7 +79,7 @@ public:
    *
    * Returns 0 (equivalent to `Level::ltr()`) on error
    *
-   * See the [Rust documentation for `level_at`](https://docs.rs/unicode_bidi/latest/unicode_bidi/struct.Paragraph.html#method.level_at) for more information.
+   * See the [Rust documentation for `level_at`](https://docs.rs/unicode_bidi/0.3.11/unicode_bidi/struct.Paragraph.html#method.level_at) for more information.
    */
   inline uint8_t level_at(size_t pos) const;
 

@@ -13,12 +13,11 @@ use core::str::FromStr;
 use icu_calendar::{AnyCalendarKind, AsCalendar, Date, DateError, Iso, RangeError};
 use icu_locale_core::subtags::subtag;
 use ixdtf::{
-    parsers::{
-        records::{
-            DateRecord, IxdtfParseRecord, TimeRecord, TimeZoneAnnotation, TimeZoneRecord,
-            UtcOffsetRecord, UtcOffsetRecordOrZ,
-        },
-        IxdtfParser,
+    encoding::Utf8,
+    parsers::IxdtfParser,
+    records::{
+        DateRecord, IxdtfParseRecord, TimeRecord, TimeZoneAnnotation, TimeZoneRecord,
+        UtcOffsetRecord, UtcOffsetRecordOrZ,
     },
     ParseError as Rfc9557ParseError,
 };
@@ -136,7 +135,9 @@ struct Intermediate<'a> {
 }
 
 impl<'a> Intermediate<'a> {
-    fn try_from_ixdtf_record(ixdtf_record: &'a IxdtfParseRecord) -> Result<Self, ParseError> {
+    fn try_from_ixdtf_record(
+        ixdtf_record: &'a IxdtfParseRecord<'_, Utf8>,
+    ) -> Result<Self, ParseError> {
         let (offset, is_z, iana_identifier) = match ixdtf_record {
             // empty
             IxdtfParseRecord {
@@ -287,7 +288,9 @@ impl<'a> Intermediate<'a> {
             "utc" | "gmt" => Some(UtcOffset::zero()),
             _ => None,
         };
-        Ok(id.with_offset(offset).at_time((date, time)))
+        Ok(id
+            .with_offset(offset)
+            .at_date_time_iso(DateTime { date, time }))
     }
 
     fn lenient(
@@ -302,7 +305,7 @@ impl<'a> Intermediate<'a> {
                 iana_parser.parse_from_utf8(iana_identifier)
             }
             None if self.is_z => TimeZone(subtag!("utc")),
-            None => TimeZone::unknown(),
+            None => TimeZone::UNKNOWN,
         };
         let offset = match self.offset {
             Some(offset) => {
@@ -319,9 +322,32 @@ impl<'a> Intermediate<'a> {
         };
         let date = Date::<Iso>::try_new_iso(self.date.year, self.date.month, self.date.day)?;
         let time = Time::try_from_time_record(&self.time)?;
-        Ok(id.with_offset(offset).at_time((date, time)))
+        Ok(id
+            .with_offset(offset)
+            .at_date_time_iso(DateTime { date, time }))
     }
 
+    #[allow(deprecated)]
+    fn all(
+        self,
+        iana_parser: IanaParserBorrowed<'_>,
+    ) -> Result<TimeZoneInfo<models::AtTime>, ParseError> {
+        let Some(offset) = self.offset else {
+            return Err(ParseError::MismatchedTimeZoneFields);
+        };
+        let Some(iana_identifier) = self.iana_identifier else {
+            return Err(ParseError::MismatchedTimeZoneFields);
+        };
+        let time_zone_id = iana_parser.parse_from_utf8(iana_identifier);
+        let date = Date::try_new_iso(self.date.year, self.date.month, self.date.day)?;
+        let time = Time::try_from_time_record(&self.time)?;
+        let offset = UtcOffset::try_from_utc_offset_record(offset)?;
+        Ok(time_zone_id
+            .with_offset(Some(offset))
+            .at_date_time_iso(DateTime { date, time }))
+    }
+
+    #[allow(deprecated)]
     fn full(
         self,
         iana_parser: IanaParserBorrowed<'_>,
@@ -339,7 +365,7 @@ impl<'a> Intermediate<'a> {
         let offset = UtcOffset::try_from_utc_offset_record(offset)?;
         Ok(time_zone_id
             .with_offset(Some(offset))
-            .at_time((date, time))
+            .at_date_time_iso(DateTime { date, time })
             .infer_variant(offset_calculator))
     }
 }
@@ -405,9 +431,6 @@ impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::AtTime>> {
     ///
     /// This function is "lenient": the string can have an offset, and named time zone, both, or
     /// neither. If the named time zone is missing, it is returned as Etc/Unknown.
-    ///
-    /// The zone variant is _not_ calculated with this function. If you need it, use
-    /// [`Self::try_from_str`].
     pub fn try_lenient_from_str(
         rfc_9557_str: &str,
         calendar: A,
@@ -430,9 +453,7 @@ impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::AtTime>> {
         let zone = Intermediate::try_from_ixdtf_record(&ixdtf_record)?.lenient(iana_parser)?;
         Ok(ZonedDateTime { date, time, zone })
     }
-}
 
-impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::Full>> {
     /// Create a [`ZonedDateTime`] in any calendar from an RFC 9557 string.
     ///
     /// Returns an error if the string has a calendar annotation that does not
@@ -448,17 +469,18 @@ impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::Full>> {
     ///
     /// ```
     /// use icu::calendar::cal::Hebrew;
+    /// use icu::locale::subtags::subtag;
     /// use icu::time::{
-    ///     zone::{IanaParser, TimeZoneVariant, UtcOffset, VariantOffsetsCalculator},
+    ///     zone::{
+    ///         IanaParser, TimeZoneVariant, UtcOffset, VariantOffsetsCalculator,
+    ///     },
     ///     TimeZone, TimeZoneInfo, ZonedDateTime,
     /// };
-    /// use icu::locale::subtags::subtag;
     ///
-    /// let zoneddatetime = ZonedDateTime::try_from_str(
+    /// let zoneddatetime = ZonedDateTime::try_strict_from_str(
     ///     "2024-08-08T12:08:19-05:00[America/Chicago][u-ca=hebrew]",
     ///     Hebrew,
     ///     IanaParser::new(),
-    ///     VariantOffsetsCalculator::new(),
     /// )
     /// .unwrap();
     ///
@@ -473,16 +495,12 @@ impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::Full>> {
     /// assert_eq!(zoneddatetime.time.minute.number(), 8);
     /// assert_eq!(zoneddatetime.time.second.number(), 19);
     /// assert_eq!(zoneddatetime.time.subsecond.number(), 0);
-    /// assert_eq!(
-    ///     zoneddatetime.zone.id(),
-    ///     TimeZone(subtag!("uschi"))
-    /// );
+    /// assert_eq!(zoneddatetime.zone.id(), TimeZone(subtag!("uschi")));
     /// assert_eq!(
     ///     zoneddatetime.zone.offset(),
     ///     Some(UtcOffset::try_from_seconds(-18000).unwrap())
     /// );
-    /// assert_eq!(zoneddatetime.zone.variant(), TimeZoneVariant::Daylight);
-    /// let (_, _) = zoneddatetime.zone.local_time();
+    /// let _ = zoneddatetime.zone.zone_name_timestamp();
     /// ```
     ///
     /// An RFC 9557 string can provide a time zone in two parts: the DateTime UTC Offset or the Time Zone
@@ -517,11 +535,11 @@ impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::Full>> {
     ///
     /// ```
     /// use icu::calendar::Iso;
+    /// use icu::locale::subtags::subtag;
     /// use icu::time::{
     ///     zone::{IanaParser, TimeZoneVariant, UtcOffset},
     ///     TimeZone, TimeZoneInfo, ZonedDateTime,
     /// };
-    /// use icu::locale::subtags::subtag;
     ///
     /// let tz_from_offset_annotation = ZonedDateTime::try_offset_only_from_str(
     ///     "2024-08-08T12:08:19[-05:00]",
@@ -551,39 +569,6 @@ impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::Full>> {
     ///
     /// An RFC 9557 string may contain both a UTC Offset and time zone annotation. This is fine as long as
     /// the time zone parts can be deemed as inconsistent or unknown consistency.
-    ///
-    /// ### UTC Offset with IANA identifier annotation
-    ///
-    /// In cases where the UTC Offset as well as the IANA identifier are provided, some validity checks are performed.
-    ///
-    /// ```
-    /// use icu::calendar::Iso;
-    /// use icu::time::{TimeZoneInfo, ZonedDateTime, TimeZone, ParseError, zone::{UtcOffset, TimeZoneVariant, IanaParser, VariantOffsetsCalculator}};
-    /// use icu::locale::subtags::subtag;
-    ///
-    /// let consistent_tz_from_both = ZonedDateTime::try_from_str("2024-08-08T12:08:19-05:00[America/Chicago]", Iso, IanaParser::new(), VariantOffsetsCalculator::new()).unwrap();
-    ///
-    ///
-    /// assert_eq!(consistent_tz_from_both.zone.id(), TimeZone(subtag!("uschi")));
-    /// assert_eq!(consistent_tz_from_both.zone.offset(), Some(UtcOffset::try_from_seconds(-18000).unwrap()));
-    /// assert_eq!(consistent_tz_from_both.zone.variant(), TimeZoneVariant::Daylight);
-    /// let (_, _) = consistent_tz_from_both.zone.local_time();
-    ///
-    /// // There is no name for America/Los_Angeles at -05:00 (at least in 2024), so either the
-    /// // time zone or the offset are wrong.
-    /// // The only valid way to display this zoned datetime is "GMT-5", so we drop the time zone.
-    /// assert_eq!(
-    ///     ZonedDateTime::try_from_str("2024-08-08T12:08:19-05:00[America/Los_Angeles]", Iso, IanaParser::new(), VariantOffsetsCalculator::new())
-    ///     .unwrap().zone.id(),
-    ///     TimeZone::unknown()
-    /// );
-    ///
-    /// // We don't know that America/Los_Angeles didn't use standard time (-08:00) in August, but we have a
-    /// // name for Los Angeles at -8 (Pacific Standard Time), so this parses successfully.
-    /// assert!(
-    ///     ZonedDateTime::try_from_str("2024-08-08T12:08:19-08:00[America/Los_Angeles]", Iso, IanaParser::new(), VariantOffsetsCalculator::new()).is_ok()
-    /// );
-    /// ```
     ///
     /// ### DateTime UTC offset with UTC Offset annotation.
     ///
@@ -617,13 +602,42 @@ impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::Full>> {
     ///     Err(ParseError::InconsistentTimeUtcOffsets)
     /// ));
     /// ```
-    pub fn try_from_str(
+    pub fn try_strict_from_str(
+        rfc_9557_str: &str,
+        calendar: A,
+        iana_parser: IanaParserBorrowed,
+    ) -> Result<Self, ParseError> {
+        Self::try_strict_from_utf8(rfc_9557_str.as_bytes(), calendar, iana_parser)
+    }
+
+    /// Create a [`ZonedDateTime`] in any calendar from RFC 9557 UTF-8 bytes.
+    ///
+    /// See [`Self::try_strict_from_str`].
+    pub fn try_strict_from_utf8(
+        rfc_9557_str: &[u8],
+        calendar: A,
+        iana_parser: IanaParserBorrowed,
+    ) -> Result<Self, ParseError> {
+        let ixdtf_record = IxdtfParser::from_utf8(rfc_9557_str).parse()?;
+        let date = Date::try_from_ixdtf_record(&ixdtf_record, calendar)?;
+        let time = Time::try_from_ixdtf_record(&ixdtf_record)?;
+        let zone = Intermediate::try_from_ixdtf_record(&ixdtf_record)?.all(iana_parser)?;
+
+        Ok(ZonedDateTime { date, time, zone })
+    }
+}
+
+#[allow(deprecated)]
+impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::Full>> {
+    /// Create a [`ZonedDateTime`] in any calendar from an RFC 9557 string.
+    #[deprecated(since = "2.1.0", note = "use `try_strict_from_str`")]
+    pub fn try_full_from_str(
         rfc_9557_str: &str,
         calendar: A,
         iana_parser: IanaParserBorrowed,
         offset_calculator: VariantOffsetsCalculatorBorrowed,
     ) -> Result<Self, ParseError> {
-        Self::try_from_utf8(
+        Self::try_full_from_utf8(
             rfc_9557_str.as_bytes(),
             calendar,
             iana_parser,
@@ -633,8 +647,9 @@ impl<A: AsCalendar> ZonedDateTime<A, TimeZoneInfo<models::Full>> {
 
     /// Create a [`ZonedDateTime`] in any calendar from RFC 9557 UTF-8 bytes.
     ///
-    /// See [`Self::try_from_str`].
-    pub fn try_from_utf8(
+    /// See [`Self::try_full_from_str`].
+    #[deprecated(since = "2.1.0", note = "use `try_strict_from_utf8`")]
+    pub fn try_full_from_utf8(
         rfc_9557_str: &[u8],
         calendar: A,
         iana_parser: IanaParserBorrowed,
@@ -737,7 +752,9 @@ impl Time {
         Self::try_from_ixdtf_record(&ixdtf_record)
     }
 
-    fn try_from_ixdtf_record(ixdtf_record: &IxdtfParseRecord) -> Result<Self, ParseError> {
+    fn try_from_ixdtf_record(
+        ixdtf_record: &IxdtfParseRecord<'_, Utf8>,
+    ) -> Result<Self, ParseError> {
         let time_record = ixdtf_record.time.ok_or(ParseError::MissingFields)?;
         Self::try_from_time_record(&time_record)
     }
@@ -800,13 +817,13 @@ mod test {
 
     #[test]
     fn future_zone() {
-        let result = ZonedDateTime::try_lenient_from_str(
+        let result = ZonedDateTime::try_location_only_from_str(
             "2024-08-08T12:08:19[Future/Zone]",
             Iso,
             IanaParserBorrowed::new(),
         )
         .unwrap();
-        assert_eq!(result.zone.id(), TimeZone::unknown());
+        assert_eq!(result.zone.id(), TimeZone::UNKNOWN);
         assert_eq!(result.zone.offset(), None);
     }
 

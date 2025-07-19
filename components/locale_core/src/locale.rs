@@ -89,7 +89,7 @@ use core::str::FromStr;
 ///
 /// [`Unicode Locale Identifier`]: https://unicode.org/reports/tr35/tr35.html#Unicode_locale_identifier
 /// [tr35-bcp]: https://unicode.org/reports/tr35/#BCP_47_Conformance
-#[derive(Default, PartialEq, Eq, Clone, Hash)] // no Ord or PartialOrd: see docs
+#[derive(PartialEq, Eq, Clone, Hash)] // no Ord or PartialOrd: see docs
 #[allow(clippy::exhaustive_structs)] // This struct is stable (and invoked by a macro)
 pub struct Locale {
     /// The basic language/script/region components in the locale identifier along with any variants.
@@ -99,6 +99,8 @@ pub struct Locale {
 }
 
 #[test]
+// Expected sizes are based on a 64-bit architecture
+#[cfg(target_pointer_width = "64")]
 fn test_sizes() {
     assert_eq!(core::mem::size_of::<subtags::Language>(), 3);
     assert_eq!(core::mem::size_of::<subtags::Script>(), 4);
@@ -121,6 +123,9 @@ fn test_sizes() {
 }
 
 impl Locale {
+    /// The unknown locale "und".
+    pub const UNKNOWN: Self = crate::locale!("und");
+
     /// A constructor which takes a utf8 slice, parses it and
     /// produces a well-formed [`Locale`].
     ///
@@ -141,14 +146,6 @@ impl Locale {
     #[cfg(feature = "alloc")]
     pub fn try_from_utf8(code_units: &[u8]) -> Result<Self, ParseError> {
         parse_locale(code_units)
-    }
-
-    /// Const-friendly version of [`Default::default`].
-    pub const fn default() -> Self {
-        Self {
-            id: LanguageIdentifier::default(),
-            extensions: extensions::Extensions::new(),
-        }
     }
 
     /// Normalize the locale (operating on UTF-8 formatted byte slices)
@@ -248,7 +245,7 @@ impl Locale {
         writeable::cmp_utf8(self, other)
     }
 
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     pub(crate) fn as_tuple(
         &self,
     ) -> (
@@ -427,7 +424,7 @@ impl Locale {
     }
 
     #[doc(hidden)] // macro use
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     pub const fn try_from_utf8_with_single_variant_single_keyword_unicode_extension(
         code_units: &[u8],
     ) -> Result<
@@ -492,7 +489,7 @@ impl_writeable_for_each_subtag_str_no_test!(Locale, selff, selff.extensions.is_e
 #[test]
 fn test_writeable() {
     use writeable::assert_writeable_eq;
-    assert_writeable_eq!(Locale::default(), "und");
+    assert_writeable_eq!(Locale::UNKNOWN, "und");
     assert_writeable_eq!("und-001".parse::<Locale>().unwrap(), "und-001");
     assert_writeable_eq!("und-Mymr".parse::<Locale>().unwrap(), "und-Mymr");
     assert_writeable_eq!("my-Mymr-MM".parse::<Locale>().unwrap(), "my-Mymr-MM");
@@ -531,7 +528,7 @@ impl From<subtags::Language> for Locale {
     fn from(language: subtags::Language) -> Self {
         Self {
             id: language.into(),
-            ..Default::default()
+            extensions: extensions::Extensions::new(),
         }
     }
 }
@@ -548,7 +545,7 @@ impl From<Option<subtags::Script>> for Locale {
     fn from(script: Option<subtags::Script>) -> Self {
         Self {
             id: script.into(),
-            ..Default::default()
+            extensions: extensions::Extensions::new(),
         }
     }
 }
@@ -565,7 +562,7 @@ impl From<Option<subtags::Region>> for Locale {
     fn from(region: Option<subtags::Region>) -> Self {
         Self {
             id: region.into(),
-            ..Default::default()
+            extensions: extensions::Extensions::new(),
         }
     }
 }
@@ -604,7 +601,7 @@ impl
     ) -> Self {
         Self {
             id: lsr.into(),
-            ..Default::default()
+            extensions: extensions::Extensions::new(),
         }
     }
 }

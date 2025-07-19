@@ -59,6 +59,18 @@ void main() {
     );
   });
 
+  test('Locale extensions', () {
+    var locale = Locale.fromString('en-GB');
+    expect(locale.getUnicodeExtension('ca'), null);
+    expect(locale.setUnicodeExtension('ca', 'gregory'), true);
+    expect(locale.setUnicodeExtension('ca', 'gregorian'), false);
+    expect(locale.setUnicodeExtension('calendar', 'gregory'), false);
+    expect(locale.getUnicodeExtension('ca'), 'gregory');
+    expect(locale.toString(), 'en-GB-u-ca-gregory');
+    expect(locale.setUnicodeExtension('ka', 'gregory'), true);
+    expect(locale.toString(), 'en-GB-u-ca-gregory-ka-gregory');
+  });
+
   test('Time zones', () {
     final iter = IanaParserExtended().iterAll();
     iter.moveNext();
@@ -82,17 +94,15 @@ void main() {
   });
 
   test('DateTime formatting', () {
-    final zonedDateTimeIso = ZonedIsoDateTime.fromString(
+    final zonedDateTimeIso = ZonedIsoDateTime.strictFromString(
       '2025-01-15T14:32:12.34+01[Europe/Zurich]',
       IanaParser(),
-      VariantOffsetsCalculator(),
     );
 
-    final zonedDateTimeBuddhist = ZonedDateTime.fromString(
+    final zonedDateTimeBuddhist = ZonedDateTime.strictFromString(
       '2026-01-15T05:32:12.34+07[Asia/Bangkok][u-ca=buddhist]',
       Calendar(CalendarKind.buddhist),
       IanaParser(),
-      VariantOffsetsCalculator(),
     );
 
     var locale = Locale.fromString('de-u-ca-islamic-umalqura');
@@ -201,11 +211,12 @@ void main() {
     );
 
     expect(
-      () => ZonedDateFormatter.genericLong(
+      ZonedDateFormatter.genericLong(
         locale,
         DateFormatter.ymd(locale),
       ).formatIso(zonedDateTimeIso.date, TimeZoneInfo.utc()),
-      throwsA(DateTimeWriteError.missingInputField),
+      // Note: this fills in noon for the ZoneNameTimestamp
+      '15.07.1446 AH Koordinierte Weltzeit',
     );
 
     ///// ZonedTimeFormatter /////
@@ -233,7 +244,7 @@ void main() {
     );
 
     expect(
-      () => ZonedDateTimeFormatter.genericLong(
+      ZonedDateTimeFormatter.specificLong(
         locale,
         DateTimeFormatter.ymdet(locale),
       ).formatIso(
@@ -241,7 +252,7 @@ void main() {
         zonedDateTimeIso.time,
         TimeZoneInfo.utc(),
       ),
-      throwsA(DateTimeWriteError.missingInputField),
+      'Mi., 15. Raj. 1446 AH, 14:32:12 Koordinierte Weltzeit',
     );
 
     expect(
@@ -266,6 +277,36 @@ void main() {
         zonedDateTimeIso.zone,
       ),
       '15.07.46 AH, 14:32:12 MEZ',
+    );
+
+    expect(
+      ZonedDateTimeFormatter.genericLong(
+        locale,
+        DateTimeFormatter.mdt(locale),
+      ).formatIso(
+        zonedDateTimeIso.date,
+        zonedDateTimeIso.time,
+        TimeZoneInfo(
+          TimeZone.fromBcp47('uslax'),
+          offset: UtcOffset.fromSeconds(-420),
+        ),
+      ),
+      '15.07., 14:32:12 GMT-00:07',
+    );
+
+    var customZDT = ZonedIsoDateTime.fromEpochMillisecondsAndUtcOffset(
+      1746140981731, // 2025-05-01T23:09:41.731Z
+      UtcOffset.fromString('+02'),
+    );
+    expect(
+      ZonedDateTimeFormatter.genericShort(
+        Locale.fromString('en'),
+        DateTimeFormatter.ymdt(
+          Locale.fromString('en'),
+          timePrecision: TimePrecision.subsecond3,
+        ),
+      ).formatIso(customZDT.date, customZDT.time, customZDT.zone),
+      'May 2, 2025, 1:09:41.731 AM GMT+2',
     );
 
     ///// ZonedDateTimeFormatterGregorian /////

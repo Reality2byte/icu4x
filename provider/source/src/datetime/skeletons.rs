@@ -3,10 +3,8 @@
 // (online at: https://github.com/unicode-org/icu4x/blob/main/LICENSE ).
 
 use crate::cldr_serde;
-use icu::datetime::provider::calendar::*;
 use icu::datetime::provider::skeleton::reference::Skeleton;
-use icu::datetime::provider::skeleton::SkeletonError;
-use icu::datetime::provider::skeleton::{PatternPlurals, PluralPattern};
+use icu::datetime::provider::skeleton::*;
 use icu::plurals::PluralCategory;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -77,13 +75,13 @@ impl From<&cldr_serde::ca::AvailableFormats> for DateSkeletonPatterns<'_> {
 
 #[cfg(test)]
 mod test {
+    use super::super::legacy::DateLengths;
+    use super::*;
     use core::convert::TryFrom;
     use core::str::FromStr;
     use icu::datetime::provider::fields::components;
     use icu::datetime::provider::skeleton::reference::Skeleton;
-    use icu::datetime::provider::skeleton::*;
     use icu::datetime::{
-        provider::calendar::{DateLengths, DateSkeletonPatterns, SkeletonData},
         provider::fields::{Day, Field, FieldLength, Month, Weekday},
         provider::pattern::{reference, runtime},
     };
@@ -122,8 +120,8 @@ mod test {
         let (_, skeletons) = get_data_payload();
 
         match get_best_available_format_pattern(&skeletons, &requested_fields, false) {
-            BestSkeleton::AllFieldsMatch(available_format_pattern)
-            | BestSkeleton::MissingOrExtraFields(available_format_pattern) => {
+            BestSkeleton::AllFieldsMatch(available_format_pattern, _)
+            | BestSkeleton::MissingOrExtraFields(available_format_pattern, _) => {
                 assert_eq!(
                     available_format_pattern
                         .expect_pattern("pattern should not have plural variants")
@@ -147,7 +145,7 @@ mod test {
         let (_, skeletons) = get_data_payload();
 
         match get_best_available_format_pattern(&skeletons, &requested_fields, false) {
-            BestSkeleton::MissingOrExtraFields(available_format_pattern) => {
+            BestSkeleton::MissingOrExtraFields(available_format_pattern, _) => {
                 assert_eq!(
                     available_format_pattern
                         .expect_pattern("pattern should not have plural variants")
@@ -182,7 +180,7 @@ mod test {
             &Default::default(),
             false,
         ) {
-            BestSkeleton::AllFieldsMatch(available_format_pattern) => {
+            BestSkeleton::AllFieldsMatch(available_format_pattern, _) => {
                 // TODO - Append items are needed here.
                 assert_eq!(
                     available_format_pattern
@@ -376,7 +374,7 @@ mod test {
         let (_, skeletons) = get_data_payload();
 
         match get_best_available_format_pattern(&skeletons, &requested_fields, false) {
-            BestSkeleton::AllFieldsMatch(available_format_pattern) => {
+            BestSkeleton::AllFieldsMatch(available_format_pattern, _) => {
                 assert_eq!(
                     available_format_pattern
                         .expect_pattern("pattern should not have plural variants")
@@ -399,7 +397,7 @@ mod test {
         let (_, skeletons) = get_data_payload();
 
         match get_best_available_format_pattern(&skeletons, &requested_fields, false) {
-            BestSkeleton::AllFieldsMatch(available_format_pattern) => {
+            BestSkeleton::AllFieldsMatch(available_format_pattern, _) => {
                 assert_eq!(
                     available_format_pattern
                         .expect_pattern("pattern should not have plural variants")

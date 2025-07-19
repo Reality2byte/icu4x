@@ -10,6 +10,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 #include "DataError.hpp"
 #include "DataProvider.hpp"
@@ -20,32 +21,31 @@
 namespace icu4x {
 namespace capi {
     extern "C" {
-    
+
     typedef struct icu4x_ListFormatter_create_and_with_length_mv1_result {union {icu4x::capi::ListFormatter* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_ListFormatter_create_and_with_length_mv1_result;
     icu4x_ListFormatter_create_and_with_length_mv1_result icu4x_ListFormatter_create_and_with_length_mv1(const icu4x::capi::Locale* locale, icu4x::capi::ListLength length);
-    
+
     typedef struct icu4x_ListFormatter_create_and_with_length_and_provider_mv1_result {union {icu4x::capi::ListFormatter* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_ListFormatter_create_and_with_length_and_provider_mv1_result;
     icu4x_ListFormatter_create_and_with_length_and_provider_mv1_result icu4x_ListFormatter_create_and_with_length_and_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::ListLength length);
-    
+
     typedef struct icu4x_ListFormatter_create_or_with_length_mv1_result {union {icu4x::capi::ListFormatter* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_ListFormatter_create_or_with_length_mv1_result;
     icu4x_ListFormatter_create_or_with_length_mv1_result icu4x_ListFormatter_create_or_with_length_mv1(const icu4x::capi::Locale* locale, icu4x::capi::ListLength length);
-    
+
     typedef struct icu4x_ListFormatter_create_or_with_length_and_provider_mv1_result {union {icu4x::capi::ListFormatter* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_ListFormatter_create_or_with_length_and_provider_mv1_result;
     icu4x_ListFormatter_create_or_with_length_and_provider_mv1_result icu4x_ListFormatter_create_or_with_length_and_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::ListLength length);
-    
+
     typedef struct icu4x_ListFormatter_create_unit_with_length_mv1_result {union {icu4x::capi::ListFormatter* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_ListFormatter_create_unit_with_length_mv1_result;
     icu4x_ListFormatter_create_unit_with_length_mv1_result icu4x_ListFormatter_create_unit_with_length_mv1(const icu4x::capi::Locale* locale, icu4x::capi::ListLength length);
-    
+
     typedef struct icu4x_ListFormatter_create_unit_with_length_and_provider_mv1_result {union {icu4x::capi::ListFormatter* ok; icu4x::capi::DataError err;}; bool is_ok;} icu4x_ListFormatter_create_unit_with_length_and_provider_mv1_result;
     icu4x_ListFormatter_create_unit_with_length_and_provider_mv1_result icu4x_ListFormatter_create_unit_with_length_and_provider_mv1(const icu4x::capi::DataProvider* provider, const icu4x::capi::Locale* locale, icu4x::capi::ListLength length);
-    
+
     void icu4x_ListFormatter_format_utf8_mv1(const icu4x::capi::ListFormatter* self, diplomat::capi::DiplomatStringsView list, diplomat::capi::DiplomatWrite* write);
-    
+
     void icu4x_ListFormatter_format_utf16_mv1(const icu4x::capi::ListFormatter* self, diplomat::capi::DiplomatStrings16View list, diplomat::capi::DiplomatWrite* write);
-    
-    
+
     void icu4x_ListFormatter_destroy_mv1(ListFormatter* self);
-    
+
     } // extern "C"
 } // namespace capi
 } // namespace
@@ -97,6 +97,13 @@ inline std::string icu4x::ListFormatter::format(diplomat::span<const std::string
     &write);
   return output;
 }
+template<typename W>
+inline void icu4x::ListFormatter::format_write(diplomat::span<const std::string_view> list, W& writeable) const {
+  diplomat::capi::DiplomatWrite write = diplomat::WriteTrait<W>::Construct(writeable);
+  icu4x::capi::icu4x_ListFormatter_format_utf8_mv1(this->AsFFI(),
+    {reinterpret_cast<const diplomat::capi::DiplomatStringView*>(list.data()), list.size()},
+    &write);
+}
 
 inline std::string icu4x::ListFormatter::format16(diplomat::span<const std::u16string_view> list) const {
   std::string output;
@@ -105,6 +112,13 @@ inline std::string icu4x::ListFormatter::format16(diplomat::span<const std::u16s
     {reinterpret_cast<const diplomat::capi::DiplomatStringView*>(list.data()), list.size()},
     &write);
   return output;
+}
+template<typename W>
+inline void icu4x::ListFormatter::format16_write(diplomat::span<const std::u16string_view> list, W& writeable) const {
+  diplomat::capi::DiplomatWrite write = diplomat::WriteTrait<W>::Construct(writeable);
+  icu4x::capi::icu4x_ListFormatter_format_utf16_mv1(this->AsFFI(),
+    {reinterpret_cast<const diplomat::capi::DiplomatStringView*>(list.data()), list.size()},
+    &write);
 }
 
 inline const icu4x::capi::ListFormatter* icu4x::ListFormatter::AsFFI() const {

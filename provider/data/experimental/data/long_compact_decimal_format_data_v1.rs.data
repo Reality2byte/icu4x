@@ -8,6 +8,12 @@
 /// * 30490B[^1] for the actual data (130 unique structs)
 ///
 /// [^1]: these numbers can be smaller in practice due to linker deduplication
+///
+/// This macro requires the following crates:
+/// * `icu`
+/// * `icu_provider`
+/// * `icu_provider/baked`
+/// * `zerovec`
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __impl_long_compact_decimal_format_data_v1 {
@@ -817,7 +823,7 @@ macro_rules! __impl_long_compact_decimal_format_data_v1 {
                             metadata.locale = Some(fallback_iterator.take());
                             break payload;
                         }
-                        if fallback_iterator.get().is_default() {
+                        if fallback_iterator.get().is_unknown() {
                             return Err(icu_provider::DataErrorKind::IdentifierNotFound.with_req(<icu::experimental::compactdecimal::provider::LongCompactDecimalFormatDataV1 as icu_provider::DataMarker>::INFO, req));
                         }
                         fallback_iterator.step();

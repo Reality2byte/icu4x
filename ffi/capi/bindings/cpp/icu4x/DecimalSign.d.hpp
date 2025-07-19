@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <cstdlib>
 #include "../diplomat_runtime.hpp"
 
 
@@ -18,7 +19,7 @@ namespace capi {
       DecimalSign_Negative = 1,
       DecimalSign_Positive = 2,
     };
-    
+
     typedef struct DecimalSign_option {union { DecimalSign ok; }; bool is_ok; } DecimalSign_option;
 } // namespace capi
 } // namespace
@@ -27,7 +28,7 @@ namespace icu4x {
 /**
  * The sign of a Decimal, as shown in formatting.
  *
- * See the [Rust documentation for `Sign`](https://docs.rs/fixed_decimal/latest/fixed_decimal/enum.Sign.html) for more information.
+ * See the [Rust documentation for `Sign`](https://docs.rs/fixed_decimal/0.7.0/fixed_decimal/enum.Sign.html) for more information.
  */
 class DecimalSign {
 public:
@@ -37,7 +38,8 @@ public:
     Positive = 2,
   };
 
-  DecimalSign() = default;
+  DecimalSign(): value(Value::None) {}
+
   // Implicit conversions between enum and ::Value
   constexpr DecimalSign(Value v) : value(v) {}
   constexpr operator Value() const { return value; }

@@ -17,6 +17,7 @@ include = [
     "LICENSE",
     "README.md",
 ]
+version = "2.0.2"
 
 authors.workspace = true
 categories.workspace = true
@@ -24,7 +25,6 @@ edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
 rust-version.workspace = true
-version.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
@@ -33,6 +33,8 @@ all-features = true
 
 # ICU components
 icu = { workspace = true, features = ["datagen"] }
+
+icu_time = { workspace = true, features = ["ixdtf"] }
 
 # ICU infrastructure
 calendrical_calculations = { workspace = true }

@@ -63,14 +63,11 @@ use crate::{
     scaffold::*,
 };
 use enums::*;
-use icu_calendar::{
-    types::{DayOfMonth, MonthInfo, Weekday, YearInfo},
-    Date, Iso,
-};
+use icu_calendar::types::{DayOfMonth, MonthInfo, Weekday, YearInfo};
 use icu_provider::marker::NeverMarker;
 use icu_time::{
-    zone::{TimeZoneVariant, UtcOffset},
-    Hour, Minute, Nanosecond, Second, Time, TimeZone,
+    zone::{UtcOffset, ZoneNameTimestamp},
+    Hour, Minute, Nanosecond, Second, TimeZone,
 };
 
 #[cfg(doc)]
@@ -711,7 +708,7 @@ macro_rules! impl_date_marker {
             type WeekdayNamesV1 = datetime_marker_helper!(@weekdays, $($weekdays_yes)?);
         }
         impl TimeMarkers for $type_time {
-            // TODO: Consider making dayperiods optional again
+            // TODO(#6497): Consider making dayperiods optional
             type DayPeriodNamesV1 = datetime_marker_helper!(@dayperiods, yes);
             type TimeSkeletonPatternsV1 = datetime_marker_helper!(@times, yes);
             type HourInput = datetime_marker_helper!(@input/hour, yes);
@@ -923,20 +920,16 @@ macro_rules! impl_zone_marker {
         $(metazone_periods = $metazone_periods_yes:ident,)?
         // Whether to require the TimeZone
         $(input_tzid = $tzid_input_yes:ident,)?
-        // Whether to require the TimeZoneVariant
-        $(input_variant = $variant_input_yes:ident,)?
-        // Whether to require the Local Time
-        $(input_localtime = $localtime_input_yes:ident,)?
+        // Whether to require the Timestamp
+        $(input_timestamp = $timestamp_input_yes:ident,)?
     ) => {
         #[doc = concat!("**“", $sample, "**” ⇒ ", $description)]
         ///
         /// # Examples
         ///
         /// ```
-        /// use icu::datetime::input::Date;
-        /// use icu::datetime::input::{Time, TimeZone,TimeZoneInfo,  UtcOffset};
+        /// use icu::datetime::input::{Date, DateTime, Time, TimeZone, TimeZoneInfo, UtcOffset};
         /// use icu::datetime::NoCalendarFormatter;
-        /// use icu::time::zone::TimeZoneVariant;
         #[doc = concat!("use icu::datetime::fieldsets::zone::", stringify!($type), ";")]
         /// use icu::locale::{locale, subtags::subtag};
         /// use writeable::assert_writeable_eq;
@@ -950,8 +943,7 @@ macro_rules! impl_zone_marker {
         /// // Time zone info for America/Chicago in the summer
         /// let zone = TimeZone(subtag!("uschi"))
         ///     .with_offset("-05".parse().ok())
-        ///     .at_time((Date::try_new_iso(2022, 8, 29).unwrap(), Time::start_of_day()))
-        ///     .with_variant(TimeZoneVariant::Daylight);
+        ///     .at_date_time_iso(DateTime{ date: Date::try_new_iso(2022, 8, 29).unwrap(), time: Time::start_of_day() });
         ///
         /// assert_writeable_eq!(
         ///     fmt.format(&zone),
@@ -983,8 +975,7 @@ macro_rules! impl_zone_marker {
         impl ZoneMarkers for $type {
             type TimeZoneIdInput = datetime_marker_helper!(@input/timezone/id, $($tzid_input_yes)?);
             type TimeZoneOffsetInput = datetime_marker_helper!(@input/timezone/offset, yes);
-            type TimeZoneVariantInput = datetime_marker_helper!(@input/timezone/variant, $($variant_input_yes)?);
-            type TimeZoneLocalTimeInput = datetime_marker_helper!(@input/timezone/local_time, $($localtime_input_yes)?);
+            type TimeZoneNameTimestampInput = datetime_marker_helper!(@input/timezone/timestamp, $($timestamp_input_yes)?);
             type EssentialsV1 = datetime_marker_helper!(@data/zone/essentials, $($zone_essentials_yes)?);
             type LocationsV1 = datetime_marker_helper!(@data/zone/locations, $($zone_locations_yes)?);
             type LocationsRootV1 = datetime_marker_helper!(@data/zone/locations_root, $($zone_locations_yes)?);
@@ -1277,37 +1268,21 @@ impl_time_marker!(
 pub mod zone {
     use super::*;
     impl_zone_marker!(
-        /// When a display name is unavailable, falls back to the localized offset format for short lengths, and
-        /// to the location format for long lengths:
+        /// If a non-location name is not defined, falls back to the specific location format:
         ///
         /// ```
-        /// use icu::datetime::input::Date;
-        /// use icu::datetime::input::{Time, TimeZone, TimeZoneInfo, UtcOffset};
-        /// use icu::calendar::Gregorian;
-        /// use icu::datetime::FixedCalendarDateTimeFormatter;
-        /// use icu::datetime::fieldsets::zone::{SpecificLong, SpecificShort};
+        /// use icu::datetime::input::{Date, DateTime, Time, TimeZone, TimeZoneInfo, UtcOffset};
+        /// use icu::datetime::NoCalendarFormatter;
+        /// use icu::datetime::fieldsets::zone::SpecificLong;
         /// use icu::locale::{locale, subtags::subtag};
-        /// use icu::time::zone::TimeZoneVariant;
         /// use writeable::assert_writeable_eq;
         ///
         /// // Time zone info for Europe/Istanbul in the winter
         /// let zone = TimeZone(subtag!("trist"))
-        ///     .with_offset("+02".parse().ok())
-        ///     .at_time((Date::try_new_iso(2022, 1, 29).unwrap(), Time::start_of_day()))
-        ///     .with_variant(TimeZoneVariant::Standard);
+        ///     .with_offset("+03".parse().ok())
+        ///     .at_date_time_iso(DateTime{ date: Date::try_new_iso(2022, 1, 29).unwrap(), time: Time::start_of_day() });
         ///
-        /// let fmt = FixedCalendarDateTimeFormatter::<Gregorian, _>::try_new(
-        ///     locale!("en").into(),
-        ///     SpecificShort,
-        /// )
-        /// .unwrap();
-        ///
-        /// assert_writeable_eq!(
-        ///     fmt.format(&zone),
-        ///     "GMT+2"
-        /// );
-        ///
-        /// let fmt = FixedCalendarDateTimeFormatter::<Gregorian, _>::try_new(
+        /// let fmt = NoCalendarFormatter::try_new(
         ///     locale!("en").into(),
         ///     SpecificLong,
         /// )
@@ -1319,31 +1294,58 @@ pub mod zone {
         /// );
         /// ```
         ///
-        /// This style requires a [`TimeZoneVariant`], so
-        /// only a full time zone info can be formatted with this style.
-        /// For example, [`TimeZoneInfo<AtTime>`] cannot be formatted.
-        ///
-        /// ```compile_fail,E0271
-        /// use icu::datetime::input::{Date, Iso};
-        /// use icu::datetime::FixedCalendarDateTimeFormatter;
+        /// If the offset doesn't match one of the valid offsets for the zone, falls back to the localized offset format:
+        /// ```
+        /// use icu::datetime::input::{Date, DateTime, Time, TimeZone, TimeZoneInfo, UtcOffset};
+        /// use icu::datetime::NoCalendarFormatter;
         /// use icu::datetime::fieldsets::zone::SpecificLong;
         /// use icu::locale::{locale, subtags::subtag};
-        /// use icu::datetime::input::{DateTime, Time, TimeZone, UtcOffset};
-        /// use icu::time::zone::TimeZoneVariant;
         /// use writeable::assert_writeable_eq;
         ///
-        /// let datetime = DateTime { date: Date::try_new_gregorian(2024, 10, 18).unwrap(), time: Time::start_of_day() };
-        /// let time_zone_basic = TimeZone(subtag!("uschi")).with_offset("-06".parse().ok());
-        /// let time_zone_at_time = time_zone_basic.at_time((datetime.date.to_iso(), datetime.time));
+        /// // Time zone info for America/Chicago with a wrong offset
+        /// let wrong_offset = TimeZone(subtag!("uschi"))
+        ///     .with_offset("-04".parse().ok())
+        ///     .at_date_time_iso(DateTime{ date: Date::try_new_iso(2022, 8, 29).unwrap(), time: Time::start_of_day() });
         ///
-        /// let formatter = FixedCalendarDateTimeFormatter::try_new(
+        /// let fmt = NoCalendarFormatter::try_new(
+        ///     locale!("en").into(),
+        ///     SpecificLong,
+        /// )
+        /// .unwrap();
+        ///
+        /// assert_writeable_eq!(
+        ///     fmt.format(&wrong_offset),
+        ///     "GMT-04:00"
+        /// );
+        ///
+        /// // This of course always happens for the unknown time zone
+        /// let unk = TimeZone::UNKNOWN.with_offset(wrong_offset.offset()).with_zone_name_timestamp(wrong_offset.zone_name_timestamp());
+        ///
+        /// assert_writeable_eq!(
+        ///     fmt.format(&unk),
+        ///     "GMT-04:00"
+        /// );
+        /// ```
+        ///
+        /// Since non-location names might change over time,
+        /// this time zone style requires a reference time.
+        ///
+        /// ```compile_fail,E0271
+        /// use icu::datetime::NoCalendarFormatter;
+        /// use icu::datetime::fieldsets::zone::SpecificLong;
+        /// use icu::locale::{locale, subtags::subtag};
+        /// use icu::datetime::input::{TimeZone, UtcOffset};
+        ///
+        /// let time_zone_basic = TimeZone(subtag!("uschi")).without_offset();
+        ///
+        /// let formatter = NoCalendarFormatter::try_new(
         ///     locale!("en-US").into(),
         ///     SpecificLong,
         /// )
         /// .unwrap();
         ///
-        /// // error[E0271]: type mismatch resolving `<AtTime as TimeZoneModel>::TimeZoneVariant == TimeZoneVariant`
-        /// formatter.format(&time_zone_at_time);
+        /// // error[E0271]: type mismatch resolving `<Base as TimeZoneModel>::ZoneNameTimestamp == ZoneNameTimestamp`
+        /// formatter.format(&time_zone_basic);
         /// ```
         SpecificLong,
         description = "time zone in specific non-location format, long length",
@@ -1356,37 +1358,91 @@ pub mod zone {
         zone_specific_long = yes,
         metazone_periods = yes,
         input_tzid = yes,
-        input_variant = yes,
-        input_localtime = yes,
+        input_timestamp = yes,
     );
 
     impl_zone_marker!(
-        /// This style requires a [`TimeZoneVariant`], so
-        /// only a full time zone info can be formatted with this style.
-        /// For example, [`TimeZoneInfo<AtTime>`] cannot be formatted.
+        /// If a non-location name is not defined, falls back to the localized offset format.
+        /// This is the case for most zones, as each locale only contains the short names that are
+        /// used locally and generally understood:
         ///
-        /// ```compile_fail,E0271
-        /// use icu::datetime::input::{Date, Iso};
-        /// use icu::datetime::FixedCalendarDateTimeFormatter;
-        /// use icu::datetime::fieldsets::{T, zone::SpecificShort};
+        /// ```
+        /// use icu::datetime::input::{Date, DateTime, Time, TimeZone, TimeZoneInfo, UtcOffset};
+        /// use icu::datetime::NoCalendarFormatter;
+        /// use icu::datetime::fieldsets::zone::SpecificShort;
         /// use icu::locale::{locale, subtags::subtag};
-        /// use icu::datetime::input::{DateTime, Time, TimeZone, UtcOffset};
-        /// use icu::time::zone::TimeZoneVariant;
         /// use writeable::assert_writeable_eq;
         ///
-        /// let datetime = DateTime { Date::try_new_gregorian(2024, 10, 18).unwrap(), time: Time::start_of_day() };
-        /// let time_zone_basic = TimeZone(subtag!("uschi")).with_offset("-06".parse().ok());
-        /// let time_zone_at_time = time_zone_basic.at_time((datetime.date.to_iso(), datetime.time));
+        /// // Time zone info for Asia/Tokyo
+        /// let zone = TimeZone(subtag!("jptyo"))
+        ///     .with_offset("+09".parse().ok())
+        ///     .at_date_time_iso(DateTime{ date: Date::try_new_iso(2022, 1, 29).unwrap(), time: Time::start_of_day() });
         ///
-        /// let formatter = FixedCalendarDateTimeFormatter::try_new(
-        ///     locale!("en-US").into(),
-        ///     T::medium().with_zone(SpecificShort),
+        /// let fmt = NoCalendarFormatter::try_new(
+        ///     locale!("en").into(),
+        ///     SpecificShort,
         /// )
         /// .unwrap();
         ///
-        /// // error[E0271]: type mismatch resolving `<AtTime as TimeZoneModel>::TimeZoneVariant == TimeZoneVariant`
-        /// // note: required by a bound in `FixedCalendarDateTimeFormatter::<C, FSet>::format`
-        /// formatter.format(&time_zone_at_time);
+        /// // "JST" is not generally known in American English
+        /// assert_writeable_eq!(
+        ///     fmt.format(&zone),
+        ///     "GMT+9"
+        /// );
+        /// ```
+        ///
+        /// If the offset doesn't match one of the valid offsets for the zone, falls back to the localized offset format:
+        /// ```
+        /// use icu::datetime::input::{Date, DateTime, Time, TimeZone, TimeZoneInfo, UtcOffset};
+        /// use icu::datetime::NoCalendarFormatter;
+        /// use icu::datetime::fieldsets::zone::SpecificShort;
+        /// use icu::locale::{locale, subtags::subtag};
+        /// use writeable::assert_writeable_eq;
+        ///
+        /// // Time zone info for America/Chicago with a wrong offset
+        /// let wrong_offset = TimeZone(subtag!("uschi"))
+        ///     .with_offset("-04".parse().ok())
+        ///     .at_date_time_iso(DateTime{ date: Date::try_new_iso(2022, 8, 29).unwrap(), time: Time::start_of_day() });
+        ///
+        /// let fmt = NoCalendarFormatter::try_new(
+        ///     locale!("en").into(),
+        ///     SpecificShort,
+        /// )
+        /// .unwrap();
+        ///
+        /// assert_writeable_eq!(
+        ///     fmt.format(&wrong_offset),
+        ///     "GMT-4"
+        /// );
+        ///
+        /// // This of course always happens for the unknown time zone
+        /// let unk = TimeZone::UNKNOWN.with_offset(wrong_offset.offset()).with_zone_name_timestamp(wrong_offset.zone_name_timestamp());
+        ///
+        /// assert_writeable_eq!(
+        ///     fmt.format(&unk),
+        ///     "GMT-4"
+        /// );
+        /// ```
+        ///
+        /// Since non-location names might change over time,
+        /// this time zone style requires a reference time.
+        ///
+        /// ```compile_fail,E0271
+        /// use icu::datetime::NoCalendarFormatter;
+        /// use icu::datetime::fieldsets::zone::SpecificShort;
+        /// use icu::datetime::input::TimeZone;
+        /// use icu::locale::{locale, subtags::subtag};
+        ///
+        /// let time_zone_basic = TimeZone(subtag!("uschi")).without_offset();
+        ///
+        /// let formatter = NoCalendarFormatter::try_new(
+        ///     locale!("en-US").into(),
+        ///     SpecificShort,
+        /// )
+        /// .unwrap();
+        ///
+        /// // error[E0271]: type mismatch resolving `<Base as TimeZoneModel>::ZoneNameTimestamp == ZoneNameTimestamp`
+        /// formatter.format(&time_zone_basic);
         /// ```
         SpecificShort,
         description = "time zone in specific non-location format, short length",
@@ -1397,8 +1453,7 @@ pub mod zone {
         zone_specific_short = yes,
         metazone_periods = yes,
         input_tzid = yes,
-        input_variant = yes,
-        input_localtime = yes,
+        input_timestamp = yes,
     );
 
     impl_zone_marker!(
@@ -1408,8 +1463,7 @@ pub mod zone {
         /// use icu::datetime::input::Date;
         /// use icu::datetime::NoCalendarFormatter;
         /// use icu::datetime::fieldsets::zone::LocalizedOffsetLong;
-        /// use icu::datetime::input::{Time, TimeZone, UtcOffset};
-        /// use icu::time::zone::TimeZoneVariant;
+        /// use icu::datetime::input::{DateTime, Time, TimeZone, UtcOffset};
         /// use icu::locale::{locale, subtags::subtag};
         /// use writeable::assert_writeable_eq;
         ///
@@ -1418,9 +1472,7 @@ pub mod zone {
         ///
         /// let date = Date::try_new_iso(2024, 10, 18).unwrap();
         /// let time = Time::start_of_day();
-        /// let time_zone_at_time = time_zone_basic.at_time((date, time));
-        ///
-        /// let time_zone_full = time_zone_at_time.with_variant(TimeZoneVariant::Standard);
+        /// let time_zone_at_time = time_zone_basic.at_date_time_iso(DateTime{ date, time });
         ///
         /// let formatter = NoCalendarFormatter::try_new(
         ///     locale!("en-US").into(),
@@ -1442,11 +1494,6 @@ pub mod zone {
         ///     formatter.format(&time_zone_at_time),
         ///     "GMT-06:00"
         /// );
-        ///
-        /// assert_writeable_eq!(
-        ///     formatter.format(&time_zone_full),
-        ///     "GMT-06:00"
-        /// );
         /// ```
         LocalizedOffsetLong,
         description = "UTC offset, long length",
@@ -1457,6 +1504,44 @@ pub mod zone {
     );
 
     impl_zone_marker!(
+        /// All shapes of time zones can be formatted with this style.
+        ///
+        /// ```
+        /// use icu::datetime::input::Date;
+        /// use icu::datetime::NoCalendarFormatter;
+        /// use icu::datetime::fieldsets::zone::LocalizedOffsetShort;
+        /// use icu::datetime::input::{DateTime, Time, TimeZone, UtcOffset};
+        /// use icu::locale::{locale, subtags::subtag};
+        /// use writeable::assert_writeable_eq;
+        ///
+        /// let utc_offset = "-06".parse().unwrap();
+        /// let time_zone_basic = TimeZone(subtag!("uschi")).with_offset(Some(utc_offset));
+        ///
+        /// let date = Date::try_new_iso(2024, 10, 18).unwrap();
+        /// let time = Time::start_of_day();
+        /// let time_zone_at_time = time_zone_basic.at_date_time_iso(DateTime{ date, time });
+        ///
+        /// let formatter = NoCalendarFormatter::try_new(
+        ///     locale!("en-US").into(),
+        ///     LocalizedOffsetShort,
+        /// )
+        /// .unwrap();
+        ///
+        /// assert_writeable_eq!(
+        ///     formatter.format(&utc_offset),
+        ///     "GMT-6"
+        /// );
+        ///
+        /// assert_writeable_eq!(
+        ///     formatter.format(&time_zone_basic),
+        ///     "GMT-6"
+        /// );
+        ///
+        /// assert_writeable_eq!(
+        ///     formatter.format(&time_zone_at_time),
+        ///     "GMT-6"
+        /// );
+        /// ```
         LocalizedOffsetShort,
         description = "UTC offset, short length",
         length_override = Short,
@@ -1465,28 +1550,24 @@ pub mod zone {
         zone_essentials = yes,
     );
 
-    // TODO: Add short/long UTC offset?
-
     impl_zone_marker!(
-        /// When a display name is unavailable, falls back to the location format:
+        /// If a non-location name is not defined, falls back to the specific location format:
         ///
         /// ```
-        /// use icu::datetime::input::Date;
-        /// use icu::datetime::input::{Time, TimeZone};
-        /// use icu::calendar::Gregorian;
-        /// use icu::datetime::FixedCalendarDateTimeFormatter;
-        /// use icu::datetime::fieldsets::zone::GenericShort;
+        /// use icu::datetime::input::{Date, DateTime, Time, TimeZone, TimeZoneInfo, UtcOffset};
+        /// use icu::datetime::NoCalendarFormatter;
+        /// use icu::datetime::fieldsets::zone::GenericLong;
         /// use icu::locale::{locale, subtags::subtag};
         /// use writeable::assert_writeable_eq;
         ///
-        /// // Time zone info for Europe/Istanbul
+        /// // Time zone info for Europe/Istanbul in the winter
         /// let zone = TimeZone(subtag!("trist"))
-        ///     .without_offset()
-        ///     .at_time((Date::try_new_iso(2022, 1, 29).unwrap(), Time::start_of_day()));
+        ///     .with_offset("+03".parse().ok())
+        ///     .at_date_time_iso(DateTime{ date: Date::try_new_iso(2022, 1, 29).unwrap(), time: Time::start_of_day() });
         ///
-        /// let fmt = FixedCalendarDateTimeFormatter::<Gregorian, _>::try_new(
+        /// let fmt = NoCalendarFormatter::try_new(
         ///     locale!("en").into(),
-        ///     GenericShort,
+        ///     GenericLong,
         /// )
         /// .unwrap();
         ///
@@ -1496,54 +1577,36 @@ pub mod zone {
         /// );
         /// ```
         ///
-        /// Can also fall back to the UTC offset:
-        ///
+        /// If the offset doesn't match one of the valid offsets for the zone, falls back to the localized offset format:
         /// ```
-        /// use icu::datetime::input::Date;
-        /// use icu::datetime::input::Time;
+        /// use icu::datetime::input::{Date, DateTime, Time, TimeZone, TimeZoneInfo, UtcOffset};
         /// use icu::datetime::NoCalendarFormatter;
-        /// use icu::datetime::fieldsets::zone::GenericShort;
-        /// use icu::datetime::DateTimeWriteError;
-        /// use icu::locale::locale;
-        /// use icu::time::zone::IanaParser;
-        /// use tinystr::tinystr;
+        /// use icu::datetime::fieldsets::zone::GenericLong;
+        /// use icu::locale::{locale, subtags::subtag};
         /// use writeable::assert_writeable_eq;
         ///
-        /// // Set up the formatter
-        /// let mut tzf = NoCalendarFormatter::try_new(
+        /// // Time zone info for America/Chicago with a wrong offset
+        /// let wrong_offset = TimeZone(subtag!("uschi"))
+        ///     .with_offset("-04".parse().ok())
+        ///     .at_date_time_iso(DateTime{ date: Date::try_new_iso(2022, 8, 29).unwrap(), time: Time::start_of_day() });
+        ///
+        /// let fmt = NoCalendarFormatter::try_new(
         ///     locale!("en").into(),
-        ///     GenericShort,
+        ///     GenericLong,
         /// )
         /// .unwrap();
         ///
-        /// // "uschi" - has symbol data for short generic non-location
-        /// let time_zone = IanaParser::new()
-        ///     .parse("America/Chicago")
-        ///     .with_offset("-05".parse().ok())
-        ///     .at_time((Date::try_new_iso(2022, 8, 29).unwrap(), Time::start_of_day()));
         /// assert_writeable_eq!(
-        ///     tzf.format(&time_zone),
-        ///     "CT"
+        ///     fmt.format(&wrong_offset),
+        ///     "GMT-04:00"
         /// );
         ///
-        /// // "ushnl" - has time zone override symbol data for short generic non-location
-        /// let time_zone = IanaParser::new()
-        ///     .parse("Pacific/Honolulu")
-        ///     .with_offset("-10".parse().ok())
-        ///     .at_time((Date::try_new_iso(2022, 8, 29).unwrap(), Time::start_of_day()));
-        /// assert_writeable_eq!(
-        ///     tzf.format(&time_zone),
-        ///     "HST"
-        /// );
+        /// // This of course always happens for the unknown time zone
+        /// let unk = TimeZone::UNKNOWN.with_offset(wrong_offset.offset()).with_zone_name_timestamp(wrong_offset.zone_name_timestamp());
         ///
-        /// // Mis-spelling of "America/Chicago" results in a fallback to offset format
-        /// let time_zone = IanaParser::new()
-        ///     .parse("America/Chigagou")
-        ///     .with_offset("-05".parse().ok())
-        ///     .at_time((Date::try_new_iso(2022, 8, 29).unwrap(), Time::start_of_day()));
         /// assert_writeable_eq!(
-        ///     tzf.format(&time_zone),
-        ///     "GMT-5"
+        ///     fmt.format(&unk),
+        ///     "GMT-04:00"
         /// );
         /// ```
         ///
@@ -1555,7 +1618,6 @@ pub mod zone {
         /// use icu::datetime::fieldsets::zone::GenericLong;
         /// use icu::datetime::input::TimeZone;
         /// use icu::locale::{locale, subtags::subtag};
-        /// use writeable::assert_writeable_eq;
         ///
         /// let time_zone_basic = TimeZone(subtag!("uschi")).without_offset();
         ///
@@ -1565,8 +1627,7 @@ pub mod zone {
         /// )
         /// .unwrap();
         ///
-        /// // error[E0271]: type mismatch resolving `<Base as TimeZoneModel>::LocalTime == (Date<Iso>, Time)`
-        /// // note: required by a bound in `NoCalendarFormatter::<C, FSet>::format`
+        /// // error[E0271]: type mismatch resolving `<Base as TimeZoneModel>::ZoneNameTimestamp == ZoneNameTimestamp`
         /// formatter.format(&time_zone_basic);
         /// ```
         GenericLong,
@@ -1580,34 +1641,91 @@ pub mod zone {
         zone_standard_long = yes,
         metazone_periods = yes,
         input_tzid = yes,
-        input_localtime = yes,
+        input_timestamp = yes,
     );
 
     impl_zone_marker!(
-        /// Note: short time zones names are usually only available for time zones in the country
-        /// associated with a locale (so "PT" is in `en`, but not in `en-GB`). Most time zones will
-        /// fall back to the significantly longer location format (e.g. "Los Angeles Time" in `en-GB`).
+        /// If a non-location name is not defined, falls back to the location format, which is
+        /// often significantly longer!
+        /// This is the case for most zones, as each locale only contains the short names that are
+        /// used locally and generally understood:
+        ///
+        /// ```
+        /// use icu::datetime::input::{Date, DateTime, Time, TimeZone, TimeZoneInfo, UtcOffset};
+        /// use icu::datetime::NoCalendarFormatter;
+        /// use icu::datetime::fieldsets::zone::GenericShort;
+        /// use icu::locale::{locale, subtags::subtag};
+        /// use writeable::assert_writeable_eq;
+        ///
+        /// // Time zone info for Asia/Tokyo
+        /// let zone = TimeZone(subtag!("jptyo"))
+        ///     .with_offset("+09".parse().ok())
+        ///     .at_date_time_iso(DateTime{ date: Date::try_new_iso(2022, 1, 29).unwrap(), time: Time::start_of_day() });
+        ///
+        /// let fmt = NoCalendarFormatter::try_new(
+        ///     locale!("en").into(),
+        ///     GenericShort,
+        /// )
+        /// .unwrap();
+        ///
+        /// // "JST" is not generally known in American English
+        /// assert_writeable_eq!(
+        ///     fmt.format(&zone),
+        ///     "Japan Time"
+        /// );
+        /// ```
+        ///
+        /// If the offset doesn't match one of the valid offsets for the zone, falls back to the localized offset format:
+        /// ```
+        /// use icu::datetime::input::{Date, DateTime, Time, TimeZone, TimeZoneInfo, UtcOffset};
+        /// use icu::datetime::NoCalendarFormatter;
+        /// use icu::datetime::fieldsets::zone::GenericShort;
+        /// use icu::locale::{locale, subtags::subtag};
+        /// use writeable::assert_writeable_eq;
+        ///
+        /// // Time zone info for America/Chicago with a wrong offset
+        /// let wrong_offset = TimeZone(subtag!("uschi"))
+        ///     .with_offset("-04".parse().ok())
+        ///     .at_date_time_iso(DateTime{ date: Date::try_new_iso(2022, 8, 29).unwrap(), time: Time::start_of_day() });
+        ///
+        /// let fmt = NoCalendarFormatter::try_new(
+        ///     locale!("en").into(),
+        ///     GenericShort,
+        /// )
+        /// .unwrap();
+        ///
+        /// assert_writeable_eq!(
+        ///     fmt.format(&wrong_offset),
+        ///     "GMT-4"
+        /// );
+        ///
+        /// // This of course always happens for the unknown time zone
+        /// let unk = TimeZone::UNKNOWN.with_offset(wrong_offset.offset()).with_zone_name_timestamp(wrong_offset.zone_name_timestamp());
+        ///
+        /// assert_writeable_eq!(
+        ///     fmt.format(&unk),
+        ///     "GMT-4"
+        /// );
+        /// ```
         ///
         /// Since non-location names might change over time,
         /// this time zone style requires a reference time.
         ///
         /// ```compile_fail,E0271
-        /// use icu::datetime::FixedCalendarDateTimeFormatter;
+        /// use icu::datetime::NoCalendarFormatter;
         /// use icu::datetime::fieldsets::zone::GenericShort;
         /// use icu::datetime::input::TimeZone;
         /// use icu::locale::{locale, subtags::subtag};
-        /// use writeable::assert_writeable_eq;
         ///
-        /// let time_zone_basic = TimeZone(subtag!("uschi")).with_offset("-06".parse().ok());
+        /// let time_zone_basic = TimeZone(subtag!("uschi")).without_offset();
         ///
-        /// let formatter = FixedCalendarDateTimeFormatter::try_new(
+        /// let formatter = NoCalendarFormatter::try_new(
         ///     locale!("en-US").into(),
-        ///     GenericShort,
+        ///     Generic,
         /// )
         /// .unwrap();
         ///
-        /// // error[E0271]: type mismatch resolving `<Base as TimeZoneModel>::LocalTime == (Date<Iso>, Time)`
-        /// // note: required by a bound in `FixedCalendarDateTimeFormatter::<C, FSet>::format`
+        /// // error[E0271]: type mismatch resolving `<Base as TimeZoneModel>::ZoneNameTimestamp == ZoneNameTimestamp`
         /// formatter.format(&time_zone_basic);
         /// ```
         GenericShort,
@@ -1620,7 +1738,7 @@ pub mod zone {
         zone_generic_short = yes,
         metazone_periods = yes,
         input_tzid = yes,
-        input_localtime = yes,
+        input_timestamp = yes,
     );
 
     impl_zone_marker!(
@@ -1629,7 +1747,7 @@ pub mod zone {
         ///
         /// ```compile_fail,E0277
         /// use icu::datetime::input::{DateTime, Iso};
-        /// use icu::datetime::FixedCalendarDateTimeFormatter;
+        /// use icu::datetime::NoCalendarFormatter;
         /// use icu::datetime::fieldsets::zone::Location;
         /// use icu::datetime::input::UtcOffset;
         /// use tinystr::tinystr;
@@ -1638,14 +1756,14 @@ pub mod zone {
         ///
         /// let utc_offset = UtcOffset::try_from_str("-06").unwrap();
         ///
-        /// let formatter = FixedCalendarDateTimeFormatter::try_new(
+        /// let formatter = NoCalendarFormatter::try_new(
         ///     locale!("en-US").into(),
         ///     Location,
         /// )
         /// .unwrap();
         ///
         /// // error[E0277]: the trait bound `UtcOffset: AllInputMarkers<Location>` is not satisfied
-        /// // note: required by a bound in `FixedCalendarDateTimeFormatter::<C, FSet>::format`
+        /// // note: required by a bound in `NoCalendarFormatter::<C, FSet>::format`
         /// formatter.format(&utc_offset);
         /// ```
         Location,
@@ -1664,7 +1782,7 @@ pub mod zone {
         ///
         /// ```compile_fail,E0277
         /// use icu::datetime::input::{DateTime, Iso};
-        /// use icu::datetime::FixedCalendarDateTimeFormatter;
+        /// use icu::datetime::NoCalendarFormatter;
         /// use icu::datetime::fieldsets::zone::ExemplarCity;
         /// use icu::datetime::input::UtcOffset;
         /// use tinystr::tinystr;
@@ -1673,14 +1791,14 @@ pub mod zone {
         ///
         /// let utc_offset = UtcOffset::try_from_str("-06").unwrap();
         ///
-        /// let formatter = FixedCalendarDateTimeFormatter::try_new(
+        /// let formatter = NoCalendarFormatter::try_new(
         ///     locale!("en-US").into(),
         ///     ExemplarCity,
         /// )
         /// .unwrap();
         ///
         /// // error[E0277]: the trait bound `UtcOffset: AllInputMarkers<ExemplarCity>` is not satisfied
-        /// // note: required by a bound in `FixedCalendarDateTimeFormatter::<C, FSet>::format`
+        /// // note: required by a bound in `NoCalendarFormatter::<C, FSet>::format`
         /// formatter.format(&utc_offset);
         /// ```
         ExemplarCity,

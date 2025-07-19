@@ -34,6 +34,7 @@ mod collator;
 #[cfg(feature = "experimental")]
 mod currency;
 mod datetime;
+mod debug_provider;
 mod decimal;
 #[cfg(feature = "experimental")]
 mod displaynames;
@@ -83,7 +84,7 @@ pub struct SourceDataProvider {
     trie_type: TrieType,
     collation_root_han: CollationRootHan,
     pub(crate) timezone_horizon: Date<Iso>,
-    #[allow(clippy::type_complexity)] // not as complex as it appears
+    #[expect(clippy::type_complexity)] // not as complex as it appears
     requests_cache: Arc<
         FrozenMap<
             DataMarkerInfo,
@@ -110,13 +111,13 @@ impl SourceDataProvider {
     pub const TESTED_CLDR_TAG: &'static str = "47.0.0";
 
     /// The ICU export tag that has been verified to work with this version of `SourceDataProvider`.
-    pub const TESTED_ICUEXPORT_TAG: &'static str = "release-77-1";
+    pub const TESTED_ICUEXPORT_TAG: &'static str = "icu4x/2025-05-21/77.x";
 
     /// The segmentation LSTM model tag that has been verified to work with this version of `SourceDataProvider`.
     pub const TESTED_SEGMENTER_LSTM_TAG: &'static str = "v0.1.0";
 
     /// The TZDB tag that has been verified to work with this version of `SourceDataProvider`.
-    pub const TESTED_TZDB_TAG: &'static str = "2025a";
+    pub const TESTED_TZDB_TAG: &'static str = "2025b";
 
     /// A provider using the data that has been verified to work with this version of `SourceDataProvider`.
     ///
@@ -127,7 +128,7 @@ impl SourceDataProvider {
     ///
     /// ✨ *Enabled with the `networking` Cargo feature.*
     #[cfg(feature = "networking")]
-    #[allow(clippy::new_without_default)]
+    #[expect(clippy::new_without_default)]
     pub fn new() -> Self {
         // Singleton so that all instantiations share the same cache.
         static SINGLETON: std::sync::OnceLock<SourceDataProvider> = std::sync::OnceLock::new();
@@ -385,7 +386,7 @@ impl SourceDataProvider {
         SourceDataProvider: IterableDataProviderCached<M>,
     {
         if <M as DataMarker>::INFO.is_singleton {
-            if !req.id.locale.is_default() {
+            if !req.id.locale.is_unknown() {
                 Err(DataErrorKind::InvalidRequest)
             } else {
                 Ok(())
@@ -438,7 +439,6 @@ trait IterableDataProviderCached<M: DataMarker>: DataProvider<M> {
 }
 
 impl SourceDataProvider {
-    #[allow(clippy::type_complexity)] // not as complex as it appears
     fn populate_requests_cache<M: DataMarker>(
         &self,
     ) -> Result<&HashSet<DataIdentifierCow>, DataError>
